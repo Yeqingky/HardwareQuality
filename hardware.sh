@@ -1286,7 +1286,7 @@ run 2>/dev/null)"
 eps="$(awk -F: '/events per second/ {gsub(/^[ \t]+/, "", $2); print $2}' <<<"$out")"
 [[ $eps =~ ^[0-9]+(\.[0-9]+)?$ ]]&&cpuinfo[sysbench_multi]="$eps"
 [[ -n $test_pid ]]&&kill "$test_pid" 2>/dev/null&&test_on=0
-while read -r line <&3;do
+while read -r -t 1 line <&3;do
 last_line="$line"
 done
 cpuinfo[temp_count]=0
@@ -1362,7 +1362,7 @@ fi
 [[ -n $multi_score ]]&&cpuinfo[geekbench_multi]="$multi_score"
 fi
 [[ -n $test_pid ]]&&kill "$test_pid" 2>/dev/null&&test_on=0
-while read -r line <&3;do
+while read -r -t 1 line <&3;do
 last_line="$line"
 done
 cpuinfo[temp_count]=0
@@ -1590,7 +1590,7 @@ fi
 [[ -n $score_type ]]&&gpuinfo[gb_type]="$score_type"
 fi
 [[ -n $test_pid ]]&&kill "$test_pid" 2>/dev/null&&test_on=0
-while read -r line <&3;do
+while read -r -t 1 line <&3;do
 last_line="$line"
 done
 gpuinfo[temp_count]=0
