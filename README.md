@@ -22,14 +22,9 @@
 - Json输出便于大数据分析
 
 #### 屏幕截图
-|标准测试|
-| ---------------- |
-|![test](https://github.com/xykt/HardwareQuality/raw/main/res/test_cn.png)|
-
-|硬盘模式|
-| ---------------- |
-|![disk](https://github.com/xykt/HardwareQuality/raw/main/res/disk_cn.png)|
-
+|标准测试|硬盘模式|
+| ---------------- | ---------------- |
+|![test](https://github.com/xykt/HardwareQuality/raw/main/res/test_cn.svg)|![disk](https://github.com/xykt/HardwareQuality/raw/main/res/disk_cn.svg)|
 
 ## 使用方法
 
