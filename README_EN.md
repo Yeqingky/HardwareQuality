@@ -22,13 +22,9 @@
 - JSON output for big data analysis
 
 #### Screenshots
-| Standard Test |
-| ---------------- |
-| ![test](https://github.com/xykt/HardwareQuality/raw/main/res/test_en.png) |
-
-| Disk Mode |
-| ---------------- |
-| ![disk](https://github.com/xykt/HardwareQuality/raw/main/res/disk_en.png) |
+| Standard Test | Disk Mode |
+| ---------------- | ---------------- |
+| ![test](https://github.com/xykt/HardwareQuality/raw/main/res/test_en.svg) | ![disk](https://github.com/xykt/HardwareQuality/raw/main/res/disk_en.svg) |
 
 ## Usage
 
