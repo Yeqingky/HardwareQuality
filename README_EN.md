@@ -24,7 +24,7 @@
 #### Screenshots
 | Standard Test | Disk Mode |
 | ---------------- | ---------------- |
-| ![test](https://github.com/xykt/HardwareQuality/raw/main/res/test_en.svg) | ![disk](https://github.com/xykt/HardwareQuality/raw/main/res/disk_en.svg) |
+| ![test](https://github.com/xykt/HardwareQuality/raw/main/res/test_en.png) | ![disk](https://github.com/xykt/HardwareQuality/raw/main/res/disk_en.png) |
 
 ## Usage
 
