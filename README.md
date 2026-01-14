@@ -24,7 +24,7 @@
 #### 屏幕截图
 |标准测试|硬盘模式|
 | ---------------- | ---------------- |
-|![test](https://github.com/xykt/HardwareQuality/raw/main/res/test_cn.svg)|![disk](https://github.com/xykt/HardwareQuality/raw/main/res/disk_cn.svg)|
+|![test](https://github.com/xykt/HardwareQuality/raw/main/res/test_cn.png)|![disk](https://github.com/xykt/HardwareQuality/raw/main/res/disk_cn.png)|
 
 ## 使用方法
 
