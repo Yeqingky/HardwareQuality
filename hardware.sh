@@ -1,5 +1,5 @@
 #!/bin/bash
-script_version="v2026-01-13"
+script_version="v2026-01-15"
 check_bash(){
 current_bash_version=$(bash --version|head -n 1|awk -F ' ' '{for (i=1; i<=NF; i++) if ($i ~ /^[0-9]+\.[0-9]+\.[0-9]+/) {print $i; exit}}'|cut -d . -f 1)
 if [ "$current_bash_version" = "0" ]||[ "$current_bash_version" = "1" ]||[ "$current_bash_version" = "2" ]||[ "$current_bash_version" = "3" ];then
@@ -1239,6 +1239,7 @@ done
 test_cpu_sysbench(){
 local fd3_open=0
 local test_on=0
+local test_pid
 cleanup_local(){
 [[ -n $test_pid && $test_on -eq 1 ]]&&kill "$test_pid" 2>/dev/null
 ((fd3_open))&&exec 3<&-
@@ -1315,6 +1316,7 @@ test_cpu_gb5(){
 local fd3_open=0
 local fd4_open=0
 local test_on=0
+local test_pid
 cleanup_local(){
 [[ -n $PROG_BAR_PID ]]&&kill "$PROG_BAR_PID" 2>/dev/null
 [[ -n $test_pid && $test_on -eq 1 ]]&&kill "$test_pid" 2>/dev/null
@@ -1544,6 +1546,7 @@ test_gpu(){
 local fd3_open=0
 local fd4_open=0
 local test_on=0
+local test_pid
 cleanup_local(){
 [[ -n $PROG_BAR_PID ]]&&kill "$PROG_BAR_PID" 2>/dev/null
 [[ -n $test_pid && $test_on -eq 1 ]]&&kill "$test_pid" 2>/dev/null
@@ -3785,9 +3788,13 @@ hwjson="$(jq \
     }
     ' <<<"$_hwjson")"
 gpu_devices_json="[]"
+gpu_dgpu_ids=()
 for ((i=0; i<gpuinfo[count]; i++));do
 type="integrated"
-[[ ${gpuinfo[item$i.type]} == "1" ]]&&type="discrete"
+if [[ ${gpuinfo[item$i.type]} == "1" ]];then
+type="discrete"
+gpu_dgpu_ids+=("$i")
+fi
 gpu_devices_json="$(jq -n \
 --argjson arr "$gpu_devices_json" \
 --arg id "$i" \
@@ -3802,8 +3809,8 @@ gpu_devices_json="$(jq -n \
             type: $type,
             vendor: $vendor,
             name: $name,
-            vram_gb: ($vram|tonumber?),
-            max_frequency_mhz: ($freq|tonumber?)
+            vram_gb: (if ($vram|test("^[0-9]+$")) then ($vram|tonumber) else null end),
+            max_frequency_mhz: (if ($freq|test("^[0-9]+$")) then ($freq|tonumber) else null end)
           }]
           ')"
 done
@@ -3811,20 +3818,21 @@ gpu_temps_json="[]"
 for ((i=0; i<gpuinfo[temp_count]; i++));do
 min="${gpuinfo[temp${i}_min]:-}"
 max="${gpuinfo[temp${i}_max]:-}"
-if [[ $min =~ ^[0-9]+$ || $max =~ ^[0-9]+$ ]];then
+[[ $min =~ ^[0-9]+$ || $max =~ ^[0-9]+$ ]]||continue
+gpu_id="${gpu_dgpu_ids[$i]}"
+[[ -n $gpu_id ]]||continue
 gpu_temps_json="$(jq -n \
 --argjson arr "$gpu_temps_json" \
---arg id "$i" \
+--arg id "$gpu_id" \
 --arg min "$min" \
 --arg max "$max" \
 '
-              $arr + [{
-                id: ($id|tonumber),
-                min: ($min|tonumber?),
-                max: ($max|tonumber?)
-              }]
-              ')"
-fi
+          $arr + [{
+            id: ($id|tonumber),
+            min: ($min|tonumber?),
+            max: ($max|tonumber?)
+          }]
+          ')"
 done
 _hwjson="$hwjson"
 hwjson="$(jq \
