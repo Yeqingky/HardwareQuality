@@ -2648,8 +2648,11 @@ if [[ -n $min_list || -n $max_list ]];then
 echo -ne "\r$Font_Cyan${scpu[temp]}$Font_Green${scpu[min]}$min_list     $Font_Green${scpu[max]}$max_list$Font_Suffix\n"
 fi
 fi
-if [[ -n ${cpuinfo[sysbench_single]} && -n ${cpuinfo[sysbench_multi]} ]];then
-echo -ne "\r$Font_Cyan${scpu[sysbench]}$Font_Green${scpu[singlet]} ${cpuinfo[sysbench_single]}     ${scpu[multit]} ${cpuinfo[sysbench_multi]}$Font_Suffix\n"
+if [[ -n ${cpuinfo[sysbench_single]} || -n ${cpuinfo[sysbench_multi]} ]];then
+echo -ne "\r$Font_Cyan${scpu[sysbench]}$Font_Green"
+[[ -n ${cpuinfo[sysbench_single]} ]]&&echo -ne "${scpu[singlet]} ${cpuinfo[sysbench_single]}     "
+[[ -n ${cpuinfo[sysbench_multi]} ]]&&echo -ne "${scpu[multit]} ${cpuinfo[sysbench_multi]}"
+echo -ne "$Font_Suffix\n"
 fi
 if [[ -n ${cpuinfo[geekbench_single]} && -n ${cpuinfo[geekbench_multi]} ]];then
 echo -ne "\r$Font_Cyan${scpu[base]}$Font_Suffix$Font_I${Back_Red}J1900 N5105 N100 670${Back_Yellow}0K 9900K 5900X 12900${Back_Green}K 14900K 7713 7995WX$Font_Suffix\n"
