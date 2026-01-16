@@ -1,5 +1,5 @@
 #!/bin/bash
-script_version="v2026-01-15"
+script_version="v2026-01-16"
 check_bash(){
 current_bash_version=$(bash --version|head -n 1|awk -F ' ' '{for (i=1; i<=NF; i++) if ($i ~ /^[0-9]+\.[0-9]+\.[0-9]+/) {print $i; exit}}'|cut -d . -f 1)
 if [ "$current_bash_version" = "0" ]||[ "$current_bash_version" = "1" ]||[ "$current_bash_version" = "2" ]||[ "$current_bash_version" = "3" ];then
@@ -1270,20 +1270,20 @@ fd3_open=1
 test_on=1
 local test_pid=$!
 local out eps threads
-out="$(sysbench cpu \
---threads=1 \
---time=8 \
---events=0 \
-run 2>/dev/null)"
+out="$(sysbench cpu --threads=1 --time=8 --events=0 --cpu-max-prime=10000 run 2>/dev/null)"
+ret=$?
+if ((ret!=0))||! grep -q "events per second" <<<"$out";then
+out="$(sysbench --test=cpu --num-threads=1 --max-time=8 --cpu-max-prime=10000 run 2>/dev/null)"
+fi
 eps="$(awk -F: '/events per second/ {gsub(/^[ \t]+/, "", $2); print $2}' <<<"$out")"
 [[ $eps =~ ^[0-9]+(\.[0-9]+)?$ ]]&&cpuinfo[sysbench_single]="$eps"
-local threads="${cpuinfo[threads]:-${cpuinfo[cores]}}"
+threads="${cpuinfo[threads]:-${cpuinfo[cores]}}"
 [[ -z $threads || $threads -le 1 ]]&&return
-out="$(sysbench cpu \
---threads="$threads" \
---time=8 \
---events=0 \
-run 2>/dev/null)"
+out="$(sysbench cpu --threads="$threads" --time=8 --events=0 --cpu-max-prime=10000 run 2>/dev/null)"
+ret=$?
+if ((ret!=0))||! grep -q "events per second" <<<"$out";then
+out="$(sysbench --test=cpu --num-threads="$threads" --max-time=8 --cpu-max-prime=10000 run 2>/dev/null)"
+fi
 eps="$(awk -F: '/events per second/ {gsub(/^[ \t]+/, "", $2); print $2}' <<<"$out")"
 [[ $eps =~ ^[0-9]+(\.[0-9]+)?$ ]]&&cpuinfo[sysbench_multi]="$eps"
 [[ -n $test_pid ]]&&kill "$test_pid" 2>/dev/null&&test_on=0
@@ -1767,37 +1767,68 @@ show_progress_bar "$temp_info" $((55-${sinfo[lmembench]}))&
 bar_pid="$!"&&disown "$bar_pid"
 trap "kill_progress_bar" RETURN
 command -v sysbench >/dev/null 2>&1||return
-local r_mib w_mib
-w_mib=$(sysbench memory \
+local r_mib w_mib out
+out="$(sysbench memory \
 --memory-block-size=1M \
 --memory-total-size=1000G \
 --memory-oper=write \
 --memory-access-mode=seq \
---time=5 run 2>/dev/null|awk -F'[()]' '/MiB\/sec/ {print $2}'|awk '{print $1}')
-r_mib=$(sysbench memory \
+--time=5 run 2>/dev/null)"
+w_mib="$(awk -F'[()]' '/MiB\/sec/ {print $2}' <<<"$out"|awk '{print $1}')"
+if [[ -z $w_mib ]];then
+out="$(sysbench --test=memory \
+--memory-block-size=1M \
+--memory-total-size=1000G \
+--memory-oper=write \
+--memory-access-mode=seq \
+run 2>/dev/null)"
+w_mib="$(awk -F'[()]' '/MiB\/sec/ {print $2}' <<<"$out"|awk '{print $1}')"
+fi
+out="$(sysbench memory \
 --memory-block-size=1M \
 --memory-total-size=1000G \
 --memory-oper=read \
 --memory-access-mode=seq \
---time=5 run 2>/dev/null|awk -F'[()]' '/MiB\/sec/ {print $2}'|awk '{print $1}')
-if [[ -n $w_mib ]];then
-meminfo[write]=$(awk -v v="$w_mib" 'BEGIN{printf "%.1f", v*1.048576}')
+--time=5 run 2>/dev/null)"
+r_mib="$(awk -F'[()]' '/MiB\/sec/ {print $2}' <<<"$out"|awk '{print $1}')"
+if [[ -z $r_mib ]];then
+out="$(sysbench --test=memory \
+--memory-block-size=1M \
+--memory-total-size=1000G \
+--memory-oper=read \
+--memory-access-mode=seq \
+run 2>/dev/null)"
+r_mib="$(awk -F'[()]' '/MiB\/sec/ {print $2}' <<<"$out"|awk '{print $1}')"
 fi
-if [[ -n $r_mib ]];then
-meminfo[read]=$(awk -v v="$r_mib" 'BEGIN{printf "%.1f", v*1.048576}')
-fi
-local avg_lat_ns=$(sysbench memory \
+[[ -n $w_mib ]]&&meminfo[write]=$(awk -v v="$w_mib" 'BEGIN{printf "%.1f", v*1.048576}')
+[[ -n $r_mib ]]&&meminfo[read]=$(awk -v v="$r_mib" 'BEGIN{printf "%.1f", v*1.048576}')
+local avg_lat_ns
+out="$(sysbench memory \
 --memory-block-size=64 \
 --memory-total-size=1000G \
 --memory-oper=read \
 --memory-access-mode=rnd \
---time=5 run 2>/dev/null|awk '
+--time=5 run 2>/dev/null)"
+avg_lat_ns="$(awk '
         /total time:/   { t=$3 }
         /total number of events:/ { n=$5 }
         END {
             if (t>0 && n>0)
                 printf "%.0f", (t/n)*1e9
-        }')
+        }' <<<"$out")"
+if [[ -z $avg_lat_ns ]];then
+out="$(sysbench --test=memory \
+--memory-block-size=64 \
+--memory-total-size=1000G \
+--memory-oper=read \
+--memory-access-mode=rnd \
+run 2>/dev/null)"
+avg_lat_ns="$(awk '
+            /avg:/ {
+                gsub(/[^0-9.]/,"",$2)
+                printf "%.0f", $2*1000
+            }' <<<"$out")"
+fi
 [[ -n $avg_lat_ns ]]&&meminfo[lat]="$avg_lat_ns"
 }
 fmt_bytes(){
@@ -1896,13 +1927,57 @@ trap "kill_progress_bar" RETURN
 local total used avail p_used p_avail
 local name rota size_b type smart_out
 local idx=0
-df_out=$(df -B1 --total 2>/dev/null|awk '/^total/{print $2,$3,$4,int($3*100/$2); exit}')
-if [[ -n $df_out ]];then
-read -r total used avail p_used <<<"$df_out"
-else
+read -r total used avail p_used p_avail < <(df -B1 -P 2>/dev/null|awk '
+            NR>1 {
+                fs=$1
+                # 明确排除非磁盘 filesystem
+                # ---------- 非物理存储过滤 ----------
+                if (
+                    fs == "tmpfs"       ||
+                    fs == "devtmpfs"   ||
+                    fs == "udev"       ||
+                    fs == "overlay"    ||
+                    fs == "shm"        ||
+                    fs ~ /^fuse\./     ||
+                    fs == "cgroup"     ||
+                    fs == "cgroup2"    ||
+                    fs == "proc"       ||
+                    fs == "sysfs"      ||
+                    fs == "debugfs"    ||
+                    fs == "tracefs"    ||
+                    fs == "securityfs" ||
+                    fs == "pstore"     ||
+                    fs == "autofs"     ||
+                    fs == "mqueue"     ||
+                    fs == "hugetlbfs"  ||
+                    fs == "configfs"  ||
+                    fs == "rpc_pipefs" ||
+                    fs == "binfmt_misc"
+                ) next
+                # 强制数值化（防 BusyBox awk 溢出/字符串）
+                size = $2 + 0
+                used = $3 + 0
+                avail = $4 + 0
+                # 按 filesystem 去重
+                if (!(fs in seen)) {
+                    seen[fs]=1
+                    T += size
+                    U += used
+                    A += avail
+                }
+            }
+            END {
+                if (T > 0)
+                    printf "%.0f %.0f %.0f %d %d\n",
+                           T, U, A,
+                           int(U*100/T),
+                           int(A*100/T)
+            }
+        ')
+if [[ -z $total || $total -le 0 ]];then
 read -r total used avail p_used < <(df -B1 / 2>/dev/null|awk 'NR==2{print $2,$3,$4,int($3*100/$2)}')
-fi
 p_avail=$((100-p_used))
+fi
 diskinfo[total]=$total
 diskinfo[used]=$used
 diskinfo[avail]=$avail
