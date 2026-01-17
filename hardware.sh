@@ -1671,6 +1671,7 @@ val="$(echo "$val"|sed -E '
                             s/CHANNEL/ch/g;
                             s/DIMM/d/g
                         ')"
+val="$(echo "$val"|sed -E 's/^[[:space:]]*P([^A-Z])/p\1/')"
 val="$(echo "$val"|sed -E 's/\b([A-Z])([A-Z]+)\b/\L\1/g')"
 val="$(echo "$val"|sed -E 's/[ _-]//g')"
 meminfo[$cur.slot]="$val"
