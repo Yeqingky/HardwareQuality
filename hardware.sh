@@ -1,5 +1,5 @@
 #!/bin/bash
-script_version="v2026-01-16"
+script_version="v2026-01-18"
 check_bash(){
 current_bash_version=$(bash --version|head -n 1|awk -F ' ' '{for (i=1; i<=NF; i++) if ($i ~ /^[0-9]+\.[0-9]+\.[0-9]+/) {print $i; exit}}'|cut -d . -f 1)
 if [ "$current_bash_version" = "0" ]||[ "$current_bash_version" = "1" ]||[ "$current_bash_version" = "2" ]||[ "$current_bash_version" = "3" ];then
@@ -64,6 +64,7 @@ declare mode_json=0
 declare mode_menu=0
 declare mode_disk=0
 declare mode_fast=0
+declare mode_fast_dep=" sysbench"
 declare mode_skip=""
 declare mode_output=0
 declare mode_privacy=0
@@ -513,15 +514,17 @@ kill "$bar_pid" 2>/dev/null&&echo -ne "\r"
 install_dependencies(){
 local is_dep=1
 local is_geekbench5=1
-if ! tar --version >/dev/null 2>&1||! jq --version >/dev/null 2>&1||! curl --version >/dev/null 2>&1||! bc --version >/dev/null 2>&1||! dmidecode --version >/dev/null 2>&1||! sensors --version >/dev/null 2>&1||! lspci --version >/dev/null 2>&1||! lscpu --version >/dev/null 2>&1||! smartctl --version >/dev/null 2>&1||! fio --version >/dev/null 2>&1||! sysbench --version >/dev/null 2>&1;then
+local is_darwin=0
+[[ "$(uname)" == "Darwin" ]]&&is_darwin=1
+if ! tar --version >/dev/null 2>&1||! jq --version >/dev/null 2>&1||! curl --version >/dev/null 2>&1||! bc --version >/dev/null 2>&1||(! dmidecode --version >/dev/null 2>&1&&[ "$is_darwin" -eq 0 ])||(! sensors --version >/dev/null 2>&1&&[ "$is_darwin" -eq 0 ])||(! lspci --version >/dev/null 2>&1&&[ "$is_darwin" -eq 0 ])||(! lscpu --version >/dev/null 2>&1&&[ "$is_darwin" -eq 0 ])||! smartctl --version >/dev/null 2>&1||! fio --version >/dev/null 2>&1||(! sysbench --version >/dev/null 2>&1&&[ "${mode_fast:-0}" -eq 0 ]);then
 is_dep=0
 fi
-if ! command -v geekbench5 >/dev/null 2>&1;then
+if ! command -v geekbench5 >/dev/null 2>&1&&[[ ${mode_fast:-0} -eq 0 ]];then
 is_geekbench5=0
 fi
 if [[ $is_dep -eq 0 || $is_geekbench5 -eq 0 ]];then
 echo -e "Lacking necessary dependencies."
-[[ $is_dep -eq 0 ]]&&echo -e "Packages $Font_I${Font_Cyan}tar jq curl bc dmidecode sensors pciutils util-linux smartmontools fio$Font_Suffix will be installed using $Font_I$Font_Cyan$package_manager$Font_Suffix."
+[[ $is_dep -eq 0 ]]&&echo -e "Packages $Font_I${Font_Cyan}tar jq curl bc dmidecode sensors pciutils util-linux smartmontools fio$mode_fast_dep$Font_Suffix will be installed using $Font_I$Font_Cyan$package_manager$Font_Suffix."
 [[ $is_geekbench5 -eq 0 ]]&&echo -e "Application $Font_I${Font_Cyan}Geekbench5$Font_Suffix will be downloaded from ${Font_B}Geekbench.com$Font_Suffix and installed to folder /usr/local/bin$Font_Suffix."
 if [[ $mode_yes -eq 0 ]];then
 prompt=$(printf "Continue? (${Font_Green}y$Font_Suffix/${Font_Red}n$Font_Suffix): ")
@@ -595,29 +598,29 @@ local usesudo="sudo"
 fi
 case $package_manager in
 apt)$usesudo apt update
-$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio sysbench
+$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio"$mode_fast_dep"
 ;;
 dnf|yum)$usesudo $install_command epel-release
 $usesudo $package_manager makecache
-$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio sysbench
+$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio"$mode_fast_dep"
 ;;
 pacman)$usesudo pacman -Sy
-$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio sysbench
+$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio"$mode_fast_dep"
 ;;
 apk)$usesudo apk update
-$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio sysbench
+$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio"$mode_fast_dep"
 ;;
 pkg)$usesudo $package_manager update
-$usesudo $package_manager $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio sysbench
+$usesudo $package_manager $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio"$mode_fast_dep"
 ;;
 brew)eval "$(/opt/homebrew/bin/brew shellenv)"
-$install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio sysbench
+$install_command tar jq curl bc smartmontools fio "$mode_fast_dep"
 ;;
 zypper)$usesudo zypper refresh
-$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio sysbench
+$usesudo $install_command tar jq curl bc dmidecode sensors pciutils util-linux smartmontools fio"$mode_fast_dep"
 ;;
 xbps)$usesudo xbps-install -Sy
-$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio sysbench
+$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio"$mode_fast_dep"
 esac
 }
 install_geekbench5(){
@@ -1313,6 +1316,10 @@ fi
 done
 }
 test_cpu_gb5(){
+local mem_avail_mb=$(awk '/MemAvailable:/ {print int($2/1024)}' /proc/meminfo)
+if [[ $mem_avail_mb =~ ^[0-9]+$ ]]&&((mem_avail_mb<100));then
+return
+fi
 local fd3_open=0
 local fd4_open=0
 local test_on=0
@@ -1627,6 +1634,16 @@ trap "kill_progress_bar" RETURN
 local idx=0
 local total_mb=0
 meminfo[count]=0
+if command -v lscpu >/dev/null 2>&1;then
+ch=$(lscpu 2>/dev/null|awk -F: '
+        tolower($1) ~ /channel/ {
+            gsub(/^[ \t]+|[ \t]+$/, "", $2)
+            print $2
+        }'|head -n1)
+if [[ $ch =~ ^[0-9]+$ ]];then
+meminfo[mem_channels]="$ch"
+fi
+fi
 if command -v dmidecode >/dev/null 2>&1&&[[ $EUID -eq 0 ]]&&[[ ${osinfo[virt]} == "physical-machine" ]];then
 while IFS= read -r line;do
 case "$line" in
@@ -1644,10 +1661,29 @@ meminfo[$cur.size]="$size$unit"
 [[ $unit == "GB" ]]&&((total_mb+=size*1024))
 fi
 ;;
-*"Locator:"*)val="${line#*: }"
+*"Bank Locator:"*)val="${line#*: }"
 val="${val#"${val%%[![:space:]]*}"}"
 val="${val%"${val##*[![:space:]]}"}"
-meminfo[$cur.slot]="$(echo "$val"|tr 'a-z' 'A-Z'|sed -E 's/(CHANNEL|DIMM|_|-| )//g')"
+val="$(echo "$val"|tr 'a-z' 'A-Z')"
+val="$(echo "$val"|sed -E '
+                            s/CPU/p/g;
+                            s/NODE/n/g;
+                            s/CHANNEL/ch/g;
+                            s/DIMM/d/g
+                        ')"
+val="$(echo "$val"|sed -E 's/\b([A-Z])([A-Z]+)\b/\L\1/g')"
+val="$(echo "$val"|sed -E 's/[ _-]//g')"
+meminfo[$cur.slot]="$val"
+ch="${val%%d*}"
+if [[ -n $ch ]];then
+if [[ -z ${meminfo[mem_channels]} ]];then
+if [[ -z ${meminfo[_channels_seen]} ]];then
+meminfo[_channels_seen]="$ch"
+else
+meminfo[_channels_seen]="${meminfo[_channels_seen]} $ch"
+fi
+fi
+fi
 ;;
 *"Type:"*)val="${line#*: }"
 val="${val#"${val%%[![:space:]]*}"}"
@@ -1678,6 +1714,9 @@ meminfo[$cur.speed]="$(echo "$val"|grep -oE '[0-9]+'|head -n1)"
 esac
 done < <(dmidecode -t memory 2>/dev/null)
 meminfo[count]="$idx"
+fi
+if [[ -z ${meminfo[mem_channels]} && -n ${meminfo[_channels_seen]} ]];then
+meminfo[mem_channels]=$(echo "${meminfo[_channels_seen]}"|tr ' ' '\n'|sort -u|wc -l)
 fi
 if [[ -r /proc/meminfo ]];then
 while read -r key val _;do
@@ -1928,39 +1967,38 @@ local total used avail p_used p_avail
 local name rota size_b type smart_out
 local idx=0
 read -r total used avail p_used p_avail < <(df -B1 -P 2>/dev/null|awk '
-            NR>1 {
-                fs=$1
-                # 明确排除非磁盘 filesystem
-                # ---------- 非物理存储过滤 ----------
-                if (
-                    fs == "tmpfs"       ||
-                    fs == "devtmpfs"   ||
-                    fs == "udev"       ||
-                    fs == "overlay"    ||
-                    fs == "shm"        ||
-                    fs ~ /^fuse\./     ||
-                    fs == "cgroup"     ||
-                    fs == "cgroup2"    ||
-                    fs == "proc"       ||
-                    fs == "sysfs"      ||
-                    fs == "debugfs"    ||
-                    fs == "tracefs"    ||
-                    fs == "securityfs" ||
-                    fs == "pstore"     ||
-                    fs == "autofs"     ||
-                    fs == "mqueue"     ||
-                    fs == "hugetlbfs"  ||
-                    fs == "configfs"  ||
-                    fs == "rpc_pipefs" ||
-                    fs == "binfmt_misc"
-                ) next
-                # 强制数值化（防 BusyBox awk 溢出/字符串）
-                size = $2 + 0
-                used = $3 + 0
+            BEGIN {
+                skip["tmpfs"]
+                skip["devtmpfs"]
+                skip["udev"]
+                skip["overlay"]
+                skip["shm"]
+                skip["cgroup"]
+                skip["cgroup2"]
+                skip["proc"]
+                skip["sysfs"]
+                skip["debugfs"]
+                skip["tracefs"]
+                skip["securityfs"]
+                skip["pstore"]
+                skip["autofs"]
+                skip["mqueue"]
+                skip["hugetlbfs"]
+                skip["configfs"]
+                skip["rpc_pipefs"]
+                skip["binfmt_misc"]
+            }
+            NR > 1 {
+                fs = $1
+                # fuse.* 单独处理
+                if (fs in skip || fs ~ /^fuse\./)
+                    next
+                size  = $2 + 0
+                used  = $3 + 0
                 avail = $4 + 0
-                # 按 filesystem 去重
+            
                 if (!(fs in seen)) {
-                    seen[fs]=1
+                    seen[fs] = 1
                     T += size
                     U += used
                     A += avail
@@ -3499,6 +3537,7 @@ shift
 shift
 ;;
 -F)mode_fast=1
+mode_fast_dep=""
 shift
 ;;
 -M)mode_menu=1
@@ -3982,6 +4021,7 @@ done
 _hwjson="$hwjson"
 hwjson="$(jq \
 --argjson devices "$mem_devices_json" \
+--arg mem_channels "${meminfo[mem_channels]:-}" \
 --arg mem_total "${meminfo[total]:-}" \
 --arg mem_used "${meminfo[used]:-}" \
 --arg mem_avail "${meminfo[avail]:-}" \
@@ -4013,6 +4053,7 @@ hwjson="$(jq \
     # Memory
     ########################################
     .Memory = {
+      channels:        num($mem_channels),
       summary: {
         total:         $mem_total,
         used:          $mem_used,
