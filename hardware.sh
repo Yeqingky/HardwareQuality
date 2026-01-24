@@ -524,7 +524,7 @@ is_geekbench5=0
 fi
 if [[ $is_dep -eq 0 || $is_geekbench5 -eq 0 ]];then
 echo -e "Lacking necessary dependencies."
-[[ $is_dep -eq 0 ]]&&echo -e "Packages $Font_I${Font_Cyan}tar jq curl bc dmidecode sensors pciutils util-linux smartmontools fio$mode_fast_dep$Font_Suffix will be installed using $Font_I$Font_Cyan$package_manager$Font_Suffix."
+[[ $is_dep -eq 0 ]]&&echo -e "Packages $Font_I${Font_Cyan}tar jq curl bc dmidecode sensors pciutils util-linux smartmontools fio$mode_fast_dep$Font_Suffix will be installed using package manager$Font_Suffix."
 [[ $is_geekbench5 -eq 0 ]]&&echo -e "Application $Font_I${Font_Cyan}Geekbench5$Font_Suffix will be downloaded from ${Font_B}Geekbench.com$Font_Suffix and installed to folder /usr/local/bin$Font_Suffix."
 if [[ $mode_yes -eq 0 ]];then
 prompt=$(printf "Continue? (${Font_Green}y$Font_Suffix/${Font_Red}n$Font_Suffix): ")
