@@ -1,5 +1,5 @@
 #!/bin/bash
-script_version="v2026-01-18"
+script_version="v2026-01-24"
 check_bash(){
 current_bash_version=$(bash --version|head -n 1|awk -F ' ' '{for (i=1; i<=NF; i++) if ($i ~ /^[0-9]+\.[0-9]+\.[0-9]+/) {print $i; exit}}'|cut -d . -f 1)
 if [ "$current_bash_version" = "0" ]||[ "$current_bash_version" = "1" ]||[ "$current_bash_version" = "2" ]||[ "$current_bash_version" = "3" ];then
@@ -598,29 +598,29 @@ local usesudo="sudo"
 fi
 case $package_manager in
 apt)$usesudo apt update
-$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio"$mode_fast_dep"
+$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio $mode_fast_dep
 ;;
 dnf|yum)$usesudo $install_command epel-release
 $usesudo $package_manager makecache
-$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio"$mode_fast_dep"
+$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio $mode_fast_dep
 ;;
 pacman)$usesudo pacman -Sy
-$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio"$mode_fast_dep"
+$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio $mode_fast_dep
 ;;
 apk)$usesudo apk update
-$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio"$mode_fast_dep"
+$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio $mode_fast_dep
 ;;
 pkg)$usesudo $package_manager update
-$usesudo $package_manager $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio"$mode_fast_dep"
+$usesudo $package_manager $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio $mode_fast_dep
 ;;
 brew)eval "$(/opt/homebrew/bin/brew shellenv)"
-$install_command tar jq curl bc smartmontools fio "$mode_fast_dep"
+$install_command tar jq curl bc smartmontools fio $mode_fast_dep
 ;;
 zypper)$usesudo zypper refresh
-$usesudo $install_command tar jq curl bc dmidecode sensors pciutils util-linux smartmontools fio"$mode_fast_dep"
+$usesudo $install_command tar jq curl bc dmidecode sensors pciutils util-linux smartmontools fio $mode_fast_dep
 ;;
 xbps)$usesudo xbps-install -Sy
-$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio"$mode_fast_dep"
+$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio $mode_fast_dep
 esac
 }
 install_geekbench5(){
