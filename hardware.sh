@@ -1,5 +1,5 @@
 #!/bin/bash
-script_version="v2026-01-25"
+script_version="v2026-01-26"
 check_bash(){
 current_bash_version=$(bash --version|head -n 1|awk -F ' ' '{for (i=1; i<=NF; i++) if ($i ~ /^[0-9]+\.[0-9]+\.[0-9]+/) {print $i; exit}}'|cut -d . -f 1)
 if [ "$current_bash_version" = "0" ]||[ "$current_bash_version" = "1" ]||[ "$current_bash_version" = "2" ]||[ "$current_bash_version" = "3" ];then
@@ -519,7 +519,7 @@ local is_darwin=0
 if ! tar --version >/dev/null 2>&1||! jq --version >/dev/null 2>&1||! curl --version >/dev/null 2>&1||! bc --version >/dev/null 2>&1||(! dmidecode --version >/dev/null 2>&1&&[ "$is_darwin" -eq 0 ])||(! sensors --version >/dev/null 2>&1&&[ "$is_darwin" -eq 0 ])||(! lspci --version >/dev/null 2>&1&&[ "$is_darwin" -eq 0 ])||(! lscpu --version >/dev/null 2>&1&&[ "$is_darwin" -eq 0 ])||! smartctl --version >/dev/null 2>&1||! fio --version >/dev/null 2>&1||(! sysbench --version >/dev/null 2>&1&&[ "${mode_fast:-0}" -eq 0 ]);then
 is_dep=0
 fi
-if ! command -v geekbench5 >/dev/null 2>&1&&[[ ${mode_fast:-0} -eq 0 ]];then
+if ! command -v geekbench5 >/dev/null 2>&1&&[[ ${mode_fast:-0} -eq 0 && ${mode_privacy:-0} -eq 0 ]];then
 is_geekbench5=0
 fi
 if [[ $is_dep -eq 0 || $is_geekbench5 -eq 0 ]];then
@@ -3316,10 +3316,10 @@ smartline[$i]+="${nvme_parts[*]} "
 fi
 fi
 case "${diskinfo[disk$i.smart_pass]}" in
-PASSED)smartline[$i]+="$Back_Green$Font_White PASSED $Back_White"
+PASSED)smartline[$i]+="$Back_Green$Font_White PASSED $Font_Suffix$Back_White"
 smartlen[$i]=$((smartlen[$i]-15))
 ;;
-FAILED)smartline[$i]+="$Back_Red$Font_White FAILED $Back_White"
+FAILED)smartline[$i]+="$Back_Red$Font_White FAILED $Font_Suffix$Back_White"
 smartlen[$i]=$((smartlen[$i]-15))
 esac
 smartline[$i]="${smartline[$i]%, }"
@@ -4316,9 +4316,9 @@ get_virt
 [[ $mode_skip != *"2"* ]]&&get_mb
 [[ $mode_skip != *"3"* ]]&&get_cpu
 [[ $mode_skip != *"3"* && $mode_fast -eq 0 ]]&&test_cpu_sysbench
-[[ $mode_skip != *"3"* && $mode_fast -eq 0 ]]&&test_cpu_gb5
+[[ $mode_skip != *"3"* && $mode_fast -eq 0 && mode_privacy -eq 0 ]]&&test_cpu_gb5
 [[ $mode_skip != *"4"* ]]&&get_gpu
-[[ $mode_skip != *"4"* && $mode_fast -eq 0 ]]&&test_gpu
+[[ $mode_skip != *"4"* && $mode_fast -eq 0 && mode_privacy -eq 0 ]]&&test_gpu
 [[ $mode_skip != *"5"* ]]&&get_mem
 [[ $mode_skip != *"5"* && $mode_fast -eq 0 ]]&&test_mem
 [[ $mode_skip != *"6"* ]]&&get_disk
