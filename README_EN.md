@@ -114,6 +114,7 @@ bash <(curl -Ls https://Hardware.Check.Place) -f
 ````bash
 bash <(curl -Ls https://Hardware.Check.Place) -p
 ````
+*Since Geekbench 5 forcibly uploads test results, Geekbench 5 testing is disabled in privacy mode to strictly ensure zero data uploads.*
 
 ##### Docker (supports runtime arguments; insert them before the ```&```):
 - Linux命令行
