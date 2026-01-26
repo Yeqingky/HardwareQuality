@@ -114,6 +114,7 @@ bash <(curl -Ls https://Hardware.Check.Place) -f
 ````bash
 bash <(curl -Ls https://Hardware.Check.Place) -p
 ````
+*由于Geekbench5会强制上传测试结果，因此隐私模式会禁用Geekbench5测试，严格确保0上传*
 
 ##### Docker（支持运行参数，须在```&```前插入）（不建议）：
 - Linux命令行
