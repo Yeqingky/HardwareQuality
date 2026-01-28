@@ -22,9 +22,13 @@
 - JSON output for big data analysis
 
 #### Screenshots
-| Standard Test | Disk Mode |
+| Standard Test |
+| ---------------- |
+| ![test](https://github.com/xykt/HardwareQuality/raw/main/res/test_en.png) |
+
+| Disk Mode | Verbose Mode |
 | ---------------- | ---------------- |
-| ![test](https://github.com/xykt/HardwareQuality/raw/main/res/test_en.png) | ![disk](https://github.com/xykt/HardwareQuality/raw/main/res/disk_en.png) |
+| ![disk](https://github.com/xykt/HardwareQuality/raw/main/res/disk_en.png) | ![disk](https://github.com/xykt/HardwareQuality/raw/main/res/verbose_en.png) |
 
 ## Usage
 
@@ -66,6 +70,11 @@ bash <(curl -Ls https://Hardware.Check.Place) -F
 ##### Disk Mode:
 ````bash
 bash <(curl -Ls https://Hardware.Check.Place) -D
+````
+
+##### Verbose Mode:
+````bash
+bash <(curl -Ls https://Hardware.Check.Place) -V
 ````
 
 ##### Specify Disk Test Directory:
@@ -129,6 +138,8 @@ docker run --rm -it --privileged xykt/hardwarequality & docker rmi xykt/hardware
 *Due to Windows architecture limitations, full hardware information cannot be obtained*
 
 ## Script Updates
+
+2026/01/28 20:00 Add verbose mode to show benchmark score details
 
 2026/01/16 00:00 Script Released
 
