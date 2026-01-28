@@ -99,7 +99,7 @@ shelp_lines=(
 "            -F                             Fast mode with no benchmarks               快速检测模式不测试成绩"
 "            -M                             Run with Interactive Interface             交互界面方式运行"
 "            -S 123456                      Skip sections by number                    跳过相应章节"
-"            -V                             Verbose mode to show benchmark details     详测模式：展示全部测试细节")
+"            -V                             Verbose mode to show benchmark details     深度模式：展示全部测试细节")
 shelp=$(printf "%s\n" "${shelp_lines[@]}")
 set_language(){
 case "$YY" in
