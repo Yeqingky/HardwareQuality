@@ -1,5 +1,5 @@
 #!/bin/bash
-script_version="v2026-01-26"
+script_version="v2026-01-28"
 check_bash(){
 current_bash_version=$(bash --version|head -n 1|awk -F ' ' '{for (i=1; i<=NF; i++) if ($i ~ /^[0-9]+\.[0-9]+\.[0-9]+/) {print $i; exit}}'|cut -d . -f 1)
 if [ "$current_bash_version" = "0" ]||[ "$current_bash_version" = "1" ]||[ "$current_bash_version" = "2" ]||[ "$current_bash_version" = "3" ];then
@@ -68,6 +68,7 @@ declare mode_fast_dep=" sysbench"
 declare mode_skip=""
 declare mode_output=0
 declare mode_privacy=0
+declare mode_verbose=0
 declare outputfile=""
 declare TestDir=""
 declare hwjson
@@ -81,7 +82,7 @@ shelp_lines=(
 "HARDWARE QUALITY CHECK SCRIPT IP质量体检脚本"
 "Interactive Interface:  bash <(curl -sL Hardware.Check.Place) -EM"
 "交互界面：              bash <(curl -sL Hardware.Check.Place) -M"
-"Parameters 参数运行: bash <(curl -sL Hardware.Check.Place) [-d testdir] [-f] [-h] [-j] [-l language] [-n] [-o outputpath] [-p] [-x proxy] [-y] [-D] [-E] [-F] [-M] [-S chapters]"
+"Parameters 参数运行: bash <(curl -sL Hardware.Check.Place) [-d testdir] [-f] [-h] [-j] [-l language] [-n] [-o outputpath] [-p] [-x proxy] [-y] [-D] [-E] [-F] [-M] [-S chapters] [-V]"
 "            -d /path/to/testdir/           Specify fio disk test directory            设置fio硬盘测试路径"
 "            -f                             No mask sensitive info on reports          报告不隐藏敏感信息"
 "            -h                             Help information                           帮助信息"
@@ -97,7 +98,8 @@ shelp_lines=(
 "            -E                             Specify English Output                     指定英文输出"
 "            -F                             Fast mode with no benchmarks               快速检测模式不测试成绩"
 "            -M                             Run with Interactive Interface             交互界面方式运行"
-"            -S 123456                      Skip sections by number                    跳过相应章节")
+"            -S 123456                      Skip sections by number                    跳过相应章节"
+"            -V                             Verbose mode to show benchmark details     详测模式：展示全部测试细节")
 shelp=$(printf "%s\n" "${shelp_lines[@]}")
 set_language(){
 case "$YY" in
@@ -1315,6 +1317,77 @@ cpuinfo[temp_max]=$tmax
 fi
 done
 }
+parse_geekbench_cpu_html(){
+local html="$1"
+[[ -z $html ]]&&return 1
+_gb_key(){
+echo "$1"|sed -E '
+            s/<[^>]+>//g;
+            s/^[[:space:]]+|[[:space:]]+$//g;
+            s/[[:space:]]+/_/g
+        '
+}
+local mode=""
+local name="" score="" desc="" pct=""
+while IFS= read -r line;do
+[[ $line =~ \<h3\>Single-Core\ Performance\<\/h3\> ]]&&{
+mode="s"
+continue
+}
+[[ $line =~ \<h3\>Multi-Core\ Performance\<\/h3\> ]]&&{
+mode="m"
+continue
+}
+[[ -z $mode ]]&&continue
+if [[ $line =~ \<td\ class=\'name\'\> ]];then
+read -r name_line
+name="$(_gb_key "$name_line")"
+desc=""
+pct=""
+continue
+fi
+if [[ $line =~ \<td\ class=\'score\'\> ]];then
+score=""
+desc=""
+while IFS= read -r l;do
+if [[ -z $score && $l =~ ^[[:space:]]*[0-9]+[[:space:]]*$ ]];then
+score="$(sed 's/[^0-9]//g' <<<"$l")"
+fi
+if [[ $l =~ \<span\ class=\'description\'\> ]];then
+desc="$(sed -E 's/<[^>]+>//g; s/^[[:space:]]+|[[:space:]]+$//g' <<<"$l")"
+fi
+[[ $l =~ \<\/td\> ]]&&break
+done
+continue
+fi
+if [[ $line =~ benchmark-bar ]];then
+if [[ $line =~ width:([0-9]+)% ]];then
+pct="${BASH_REMATCH[1]}"
+fi
+if [[ -n $name && -n $score ]];then
+cpuinfo["gb.$mode.i.$name"]="$score"
+[[ -n $desc ]]&&cpuinfo["gb.$mode.i.$name.desc"]="$desc"
+[[ -n $pct ]]&&cpuinfo["gb.$mode.i.$name.pct"]="$pct"
+fi
+name="" score="" desc="" pct=""
+continue
+fi
+if [[ $line =~ \<tr\ class=\'stacked-heading\'\> ]];then
+read -r _
+read -r name_line
+read -r _
+read -r _
+read -r score_line
+local gname gscore gkey
+gname="$(_gb_key "$name_line")"
+gscore="$(sed 's/[^0-9]//g' <<<"$score_line")"
+if [[ $gname == "Single-Core_Score" || $gname == "Multi-Core_Score" ]];then
+continue
+fi
+[[ -n $gname && -n $gscore ]]&&cpuinfo["gb.$mode.g.$gname"]="$gscore"
+fi
+done <<<"$html"
+}
 test_cpu_gb5(){
 local mem_avail_mb=$(awk '/MemAvailable:/ {print int($2/1024)}' /proc/meminfo)
 if [[ $mem_avail_mb =~ ^[0-9]+$ ]]&&((mem_avail_mb<100));then
@@ -1362,6 +1435,7 @@ local url score
 url="$(geekbench5 --cpu 2>&1|tee >(cat >&4)|grep -oE 'https://browser\.geekbench\.com/v5/cpu/[0-9]+'|head -n 1)" >/dev/null
 if [[ -n $url ]];then
 local tmpresu="$(curl -sL -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" "$url")"
+parse_geekbench_cpu_html "$tmpresu"
 local scores=($(echo "$tmpresu"|grep -o "<div class='score'>[0-9]\+</div>"|sed 's/[^0-9]//g'))
 local single_score="${scores[0]}"
 local multi_score="${scores[1]}"
@@ -1549,6 +1623,54 @@ echo "$out"
 sleep 5
 done
 }
+parse_geekbench_gpu_html(){
+local html="$1"
+[[ -z $html ]]&&return 1
+_gb_key(){
+echo "$1"|sed -E '
+            s/<[^>]+>//g;
+            s/^[[:space:]]+|[[:space:]]+$//g;
+            s/[[:space:]]+/_/g
+        '
+}
+local mode=""
+local name="" score="" desc="" pct=""
+while IFS= read -r line;do
+if [[ $line =~ \<td\ class=\'name\'\> ]];then
+read -r name_line
+name="$(_gb_key "$name_line")"
+desc=""
+pct=""
+continue
+fi
+if [[ $line =~ \<td\ class=\'score\'\> ]];then
+score=""
+desc=""
+while IFS= read -r l;do
+if [[ -z $score && $l =~ ^[[:space:]]*[0-9]+[[:space:]]*$ ]];then
+score="$(sed 's/[^0-9]//g' <<<"$l")"
+fi
+if [[ $l =~ \<span\ class=\'description\'\> ]];then
+desc="$(sed -E 's/<[^>]+>//g; s/^[[:space:]]+|[[:space:]]+$//g' <<<"$l")"
+fi
+[[ $l =~ \<\/td\> ]]&&break
+done
+continue
+fi
+if [[ $line =~ benchmark-bar ]];then
+if [[ $line =~ width:([0-9]+)% ]];then
+pct="${BASH_REMATCH[1]}"
+fi
+if [[ -n $name && -n $score ]];then
+gpuinfo["gb.$name"]="$score"
+[[ -n $desc ]]&&gpuinfo["gb.$name.desc"]="$desc"
+[[ -n $pct ]]&&gpuinfo["gb.$name.pct"]="$pct"
+fi
+name="" score="" desc="" pct=""
+continue
+fi
+done <<<"$html"
+}
 test_gpu(){
 local fd3_open=0
 local fd4_open=0
@@ -1592,6 +1714,7 @@ local url score
 url="$(geekbench5 --compute 2>&1|tee >(cat >&4)|grep -oE 'https://browser\.geekbench\.com/v5/compute/[0-9]+'|head -n 1)" >/dev/null
 if [[ -n $url ]];then
 local tmpresu="$(curl -sL -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" "$url")"
+parse_geekbench_gpu_html "$tmpresu"
 score="$(echo "$tmpresu"|grep -o "<div class='score'>[0-9]\+</div>"|sed 's/[^0-9]//g'|head -n 1)"
 score_type="$(echo "$tmpresu"|grep -o "<div class='note'>[^<]*</div>"|head -n 1|sed -E "s@<div class='note'>([^[:space:]]+).*@\1@")"
 gpuinfo[url]="$url"
@@ -2301,7 +2424,7 @@ try_b=$((df_free*7/10))
 echo "Preparing Testing File" >&4
 local size_b
 size_b=$(fio_probe_size "$tf" "$try_b" "$min_b")||return
-if [[ $mode_disk -eq 0 ]];then
+if [[ $mode_disk -eq 0 && mode_verbose -eq 0 ]];then
 local tests=(
 "4k_q1   randread   4k   1"
 "4k_q32  randread   4k   32"
@@ -2600,6 +2723,81 @@ color="$Font_Green"
 fi
 echo "$bar$Font_B$color$score$Font_Suffix"
 }
+cpu_gb_bar(){
+local text="$1"
+local pct="$2"
+local width=$((pct*20/100))
+((width<1))&&width=1
+((width>20))&&width=20
+text=$(printf "%20s" "$text")
+local out=""
+local ch
+for ((i=0; i<20; i++));do
+ch="${text:i:1}"
+if ((i<width));then
+out+="$Back_Cyan$Font_White$ch$Font_Suffix"
+else
+out+="$Font_Cyan$ch$Font_Suffix"
+fi
+done
+printf '%s' "$out"
+}
+show_geekbench_cpu_table(){
+local key name disp_name
+local s_score m_score s_desc s_pct m_desc m_pct
+local line
+local s_pct_max=0 scaled_s_pct
+declare -A seen
+for key in "${!cpuinfo[@]}";do
+[[ $key =~ ^gb\.[sm]\.[gi]\.(.+)$ ]]||continue
+name="${BASH_REMATCH[1]}"
+name="${name%%.*}"
+seen["$name"]=1
+done
+for name in "${!seen[@]}";do
+if [[ -n ${cpuinfo[gb.s.i.$name.pct]} ]];then
+((cpuinfo[gb.s.i.$name.pct]>s_pct_max))&&s_pct_max="${cpuinfo[gb.s.i.$name.pct]}"
+fi
+done
+for name in $(printf "%s\n" "${!seen[@]}"|sort);do
+if [[ -n ${cpuinfo[gb.s.g.$name]} || -n ${cpuinfo[gb.m.g.$name]} ]];then
+s_score="${cpuinfo[gb.s.g.$name]}"
+m_score="${cpuinfo[gb.m.g.$name]}"
+disp_name="${name//_/ }"
+line=""
+line+="$Font_Cyan$(printf "%-22s" "$disp_name")"
+line+="$Font_Green$Font_B$(printf "%7s" "$s_score")$Font_Suffix"
+line+="$Font_Cyan    Single-Core Score||"
+line+="$Font_Green$Font_B$(printf "%7s" "$m_score")$Font_Suffix"
+line+="$Font_Cyan     Multi-Core Score$Font_Suffix"
+echo -ne "\r$line\n"
+fi
+done
+for name in $(printf "%s\n" "${!seen[@]}"|sort);do
+if [[ -z ${cpuinfo[gb.s.g.$name]} && -z ${cpuinfo[gb.m.g.$name]} ]];then
+s_score="${cpuinfo[gb.s.i.$name]}"
+m_score="${cpuinfo[gb.m.i.$name]}"
+s_desc="${cpuinfo[gb.s.i.$name.desc]}"
+m_desc="${cpuinfo[gb.m.i.$name.desc]}"
+s_pct="${cpuinfo[gb.s.i.$name.pct]:-0}"
+m_pct="${cpuinfo[gb.m.i.$name.pct]:-0}"
+disp_name="${name//_/ }"
+if ((s_pct_max>0));then
+scaled_s_pct=$((s_pct*100/s_pct_max))
+else
+scaled_s_pct=0
+fi
+line=""
+line+="$Font_Cyan$(printf "%-22s" "$disp_name")"
+line+="$Font_Green$Font_B$(printf "%7s" "$s_score")"
+line+=" $Font_Suffix$(cpu_gb_bar "$s_desc" "$scaled_s_pct")"
+line+="$Font_Cyan||"
+line+="$Font_Green$Font_B$(printf "%7s" "$m_score")"
+line+=" $Font_Suffix$(cpu_gb_bar "$m_desc" "$m_pct")"
+echo -ne "\r$line\n"
+fi
+done
+}
 show_cpu(){
 local cpuline cpuline1 cpuline2 cpulen1 cpulen2
 echo -ne "\r${scpu[title]}\n"
@@ -2700,6 +2898,7 @@ echo -ne "\r$Font_Cyan${scpu[single]}$Font_Suffix$scoretest$Font_Suffix\n"
 scoretest="$(score_bar ${cpuinfo[geekbench_multi]} 0 4500 18000 80000)"
 echo -ne "\r$Font_Cyan${scpu[multi]}$Font_Suffix$scoretest$Font_Suffix\n"
 fi
+[[ mode_verbose -eq 1 ]]&&show_geekbench_cpu_table
 if [[ -n ${cpuinfo[url]} ]];then
 echo -ne "\r$Font_Cyan${scpu[url]}$Font_Green$Font_U${cpuinfo[url]}$Font_Suffix\n"
 fi
@@ -2713,6 +2912,51 @@ echo -ne "$Font_Yellow"
 else
 echo -ne "$Font_Red"
 fi
+}
+gpu_gb_bar(){
+local text="$1"
+local pct="$2"
+local width=$((pct*50/100))
+((width<1))&&width=1
+((width>50))&&width=50
+text=$(printf "%50s" "$text")
+local out=""
+local ch
+for ((i=0; i<50; i++));do
+ch="${text:i:1}"
+if ((i<width));then
+out+="$Back_Cyan$Font_White$ch$Font_Suffix"
+else
+out+="$Font_Cyan$ch$Font_Suffix"
+fi
+done
+printf '%s' "$out"
+}
+show_geekbench_gpu_table(){
+local key name disp_name
+local s_score m_score s_desc s_pct m_desc m_pct
+local line
+local s_pct_max=0 scaled_s_pct
+declare -A seen
+for key in "${!gpuinfo[@]}";do
+[[ $key =~ ^gb\.(.+)$ ]]||continue
+name="${BASH_REMATCH[1]}"
+name="${name%%.*}"
+seen["$name"]=1
+done
+for name in $(printf "%s\n" "${!seen[@]}"|sort);do
+if [[ -z ${gpuinfo[gb.s.g.$name]} && -z ${gpuinfo[gb.m.g.$name]} ]];then
+s_score="${gpuinfo[gb.$name]}"
+s_desc="${gpuinfo[gb.$name.desc]}"
+s_pct="${gpuinfo[gb.$name.pct]:-0}"
+disp_name="${name//_/ }"
+line=""
+line+="$Font_Cyan$(printf "%-22s" "$disp_name")"
+line+="$Font_Green$Font_B$(printf "%7s" "$s_score")"
+line+=" $Font_Suffix$(gpu_gb_bar "$s_desc" "$s_pct")"
+echo -ne "\r$line\n"
+fi
+done
 }
 show_gpu(){
 [[ ${gpuinfo[count]:-0} -eq 0 ]]&&return
@@ -2777,6 +3021,7 @@ local scoretest="$(score_bar ${gpuinfo[geekbench]} 0 40000 100000 500000)"
 echo -ne "\r$Font_Cyan${sgpu[base]}$Font_Suffix$Font_I${Back_Red}HD3000 GTX750 GTX970$Back_Yellow GTX1660 RTX2060 RTX${Back_Green}3070 RTX4080 RTX5090$Font_Suffix $Font_Green(${gpuinfo[gb_type]})$Font_Suffix\n"
 echo -ne "\r$Font_Cyan${sgpu[score]}$Font_Suffix$scoretest$Font_Suffix\n"
 fi
+[[ mode_verbose -eq 1 ]]&&show_geekbench_gpu_table
 if [[ -n ${gpuinfo[url]} ]];then
 echo -ne "\r$Font_Cyan${sgpu[url]}$Font_Green$Font_U${gpuinfo[url]}$Font_Suffix\n"
 fi
@@ -3362,7 +3607,7 @@ echo -ne "\r          $Font_Green$rname -> $rlevel$rmount $rdevs$Font_Suffix\n"
 fi
 done
 fi
-if [[ $mode_disk -eq 0 ]];then
+if [[ $mode_disk -eq 0 && mode_verbose -eq 0 ]];then
 if [[ -n ${diskinfo[fio.randread.4k_q1.bw]} ]];then
 if [[ -n ${diskinfo[testdir]} ]];then
 local extra=""
@@ -3456,7 +3701,7 @@ shift
 -[dloS]*)ERRORcode=1
 shift
 ;;
--[fhjnpyDEM]*)local opt="$1"
+-[fhjnpyDEMV]*)local opt="$1"
 shift
 for ((i=1; i<${#opt}; i++));do
 args+=("-${opt:i:1}")
@@ -3551,6 +3796,9 @@ shift
 else
 ERRORcode=1
 fi
+;;
+-V)mode_verbose=1
+shift
 ;;
 -*)ERRORcode=1
 shift
@@ -3786,6 +4034,47 @@ cpu_packages_json="$(jq -n \
               ')"
 fi
 done
+gb_detail_json='{
+      "single": { "groups": {}, "items": {} },
+      "multi":  { "groups": {}, "items": {} }
+    }'
+for k in "${!cpuinfo[@]}";do
+[[ $k != gb.* ]]&&continue
+IFS='.' read -r _ mode kind name sub <<<"$k"
+case "$kind" in
+g)gb_detail_json="$(jq --arg mode "$mode" \
+--arg name "$name" \
+--arg v "${cpuinfo[$k]}" \
+'
+                     .[$mode].groups[$name] = ($v | tonumber?)
+                     ' <<<"$gb_detail_json")"
+;;
+i)if
+[[ -z $sub ]]
+then
+gb_detail_json="$(jq --arg mode "$mode" \
+--arg name "$name" \
+--arg v "${cpuinfo[$k]}" \
+'
+                         .[$mode].items[$name].score = ($v | tonumber?)
+                         ' <<<"$gb_detail_json")"
+elif [[ $sub == "desc" ]];then
+gb_detail_json="$(jq --arg mode "$mode" \
+--arg name "$name" \
+--arg v "${cpuinfo[$k]}" \
+'
+                         .[$mode].items[$name].desc = $v
+                         ' <<<"$gb_detail_json")"
+elif [[ $sub == "pct" ]];then
+gb_detail_json="$(jq --arg mode "$mode" \
+--arg name "$name" \
+--arg v "${cpuinfo[$k]}" \
+'
+                         .[$mode].items[$name].pct = ($v | tonumber?)
+                         ' <<<"$gb_detail_json")"
+fi
+esac
+done
 _hwjson="$hwjson"
 hwjson="$(jq \
 --argjson packages "$cpu_packages_json" \
@@ -3823,6 +4112,7 @@ hwjson="$(jq \
 --arg gb_url "${cpuinfo[url]:-}" \
 --arg gb_single "${cpuinfo[geekbench_single]:-}" \
 --arg gb_multi "${cpuinfo[geekbench_multi]:-}" \
+--argjson gb_detail "$gb_detail_json" \
 --arg temp_cnt "${cpuinfo[temp_count]:-}" \
 --arg temp_min "${cpuinfo[temp_min]:-}" \
 --arg temp_max "${cpuinfo[temp_max]:-}" \
@@ -3890,11 +4180,12 @@ hwjson="$(jq \
           single: num($sb_single),
           multi:  num($sb_multi)
         },
-        geekbench5: {
-          url:    $gb_url,
-          single: num($gb_single),
-          multi:  num($gb_multi)
-        }
+      geekbench5: {
+        url:    $gb_url,
+        single: num($gb_single),
+        multi:  num($gb_multi),
+        detail: $gb_detail
+      }
       },
       temperature: {
         packages_detected: num($temp_cnt),
@@ -3952,6 +4243,33 @@ gpu_temps_json="$(jq -n \
           }]
           ')"
 done
+gpu_gb_detail_json="{}"
+for k in "${!gpuinfo[@]}";do
+[[ $k != gb.* ]]&&continue
+rest="${k#gb.}"
+name="${rest%%.*}"
+sub="${rest#*.}"
+[[ $sub == "$rest" ]]&&sub="score"
+case "$sub" in
+score)gpu_gb_detail_json="$(jq --arg name "$name" \
+--arg v "${gpuinfo[$k]}" \
+'
+                     .[$name].score = ($v | tonumber?)
+                     ' <<<"$gpu_gb_detail_json")"
+;;
+desc)gpu_gb_detail_json="$(jq --arg name "$name" \
+--arg v "${gpuinfo[$k]}" \
+'
+                     .[$name].desc = $v
+                     ' <<<"$gpu_gb_detail_json")"
+;;
+pct)gpu_gb_detail_json="$(jq --arg name "$name" \
+--arg v "${gpuinfo[$k]}" \
+'
+                     .[$name].pct = ($v | tonumber?)
+                     ' <<<"$gpu_gb_detail_json")"
+esac
+done
 _hwjson="$hwjson"
 hwjson="$(jq \
 --argjson devices "$gpu_devices_json" \
@@ -3963,6 +4281,7 @@ hwjson="$(jq \
 --arg cuda "${gpuinfo[cuda]:-0}" \
 --arg gb_url "${gpuinfo[url]:-}" \
 --arg gb_score "${gpuinfo[geekbench]:-}" \
+--argjson gb_detail "$gpu_gb_detail_json" \
 --arg gb_api "${gpuinfo[gb_type]:-}" \
 --arg temp_min "${gpuinfo[temp_min]:-}" \
 --arg temp_max "${gpuinfo[temp_max]:-}" \
@@ -3981,9 +4300,10 @@ hwjson="$(jq \
       devices: $devices,
       benchmarks: {
         geekbench5: {
-          url:   $gb_url,
-          score: num($gb_score),
-          api:   $gb_api
+          url:    $gb_url,
+          score:  num($gb_score),
+          api:    $gb_api,
+          detail: $gb_detail
         }
       },
       temperature: {
