@@ -115,9 +115,239 @@
         "multi": 47592.29
       },
       "geekbench5": {
-        "url": "https://browser.geekbench.com/v5/cpu/24035617",
-        "single": 1935,
-        "multi": 11622
+        "url": "https://browser.geekbench.com/v5/cpu/24070751",
+        "single": 958,
+        "multi": 12535,
+        "detail": {
+          "single": {
+            "groups": {
+              "Integer_Score": 934,
+              "Crypto_Score": 1298,
+              "Floating_Point_Score": 952
+            },
+            "items": {
+              "Clang": {
+                "desc": "7.90 Klines/sec",
+                "pct": 4,
+                "score": 1013
+              },
+              "Machine_Learning": {
+                "pct": 1,
+                "score": 394,
+                "desc": "15.2 images/sec"
+              },
+              "Image_Inpainting": {
+                "pct": 7,
+                "desc": "85.9 Mpixels/sec",
+                "score": 1751
+              },
+              "HTML5": {
+                "pct": 3,
+                "desc": "1.13 MElements/sec",
+                "score": 966
+              },
+              "PDF_Rendering": {
+                "score": 909,
+                "pct": 3,
+                "desc": "49.3 Mpixels/sec"
+              },
+              "AES-XTS": {
+                "desc": "2.21 GB/sec",
+                "pct": 5,
+                "score": 1298
+              },
+              "Text_Rendering": {
+                "pct": 3,
+                "score": 855,
+                "desc": "272.6 KB/sec"
+              },
+              "SQLite": {
+                "pct": 3,
+                "score": 961,
+                "desc": "301.2 Krows/sec"
+              },
+              "Ray_Tracing": {
+                "pct": 5,
+                "desc": "1.04 Mpixels/sec",
+                "score": 1296
+              },
+              "Image_Compression": {
+                "desc": "43.6 Mpixels/sec",
+                "score": 922,
+                "pct": 3
+              },
+              "Navigation": {
+                "score": 927,
+                "desc": "2.62 MTE/sec",
+                "pct": 3
+              },
+              "Structure_from_Motion": {
+                "score": 707,
+                "desc": "6.34 Kpixels/sec",
+                "pct": 2
+              },
+              "Horizon_Detection": {
+                "pct": 3,
+                "score": 876,
+                "desc": "21.6 Mpixels/sec"
+              },
+              "Face_Detection": {
+                "desc": "7.27 images/sec",
+                "pct": 3,
+                "score": 944
+              },
+              "Camera": {
+                "score": 925,
+                "pct": 3,
+                "desc": "10.7 images/sec"
+              },
+              "HDR": {
+                "score": 1749,
+                "pct": 7,
+                "desc": "23.8 Mpixels/sec"
+              },
+              "Text_Compression": {
+                "desc": "4.74 MB/sec",
+                "score": 938,
+                "pct": 3
+              },
+              "Rigid_Body_Physics": {
+                "desc": "6354.2 FPS",
+                "pct": 4,
+                "score": 1026
+              },
+              "Speech_Recognition": {
+                "pct": 3,
+                "score": 940,
+                "desc": "30.1 Words/sec"
+              },
+              "Gaussian_Blur": {
+                "score": 717,
+                "pct": 2,
+                "desc": "39.4 Mpixels/sec"
+              },
+              "N-Body_Physics": {
+                "desc": "1.15 Mpairs/sec",
+                "pct": 3,
+                "score": 920
+              }
+            }
+          },
+          "multi": {
+            "groups": {
+              "Floating_Point_Score": 13124,
+              "Integer_Score": 11725,
+              "Crypto_Score": 19530
+            },
+            "items": {
+              "HTML5": {
+                "desc": "13.5 MElements/sec",
+                "pct": 46,
+                "score": 11458
+              },
+              "Navigation": {
+                "pct": 39,
+                "desc": "27.7 MTE/sec",
+                "score": 9815
+              },
+              "Text_Rendering": {
+                "desc": "2.95 MB/sec",
+                "pct": 38,
+                "score": 9477
+              },
+              "Structure_from_Motion": {
+                "pct": 44,
+                "desc": "97.9 Kpixels/sec",
+                "score": 10927
+              },
+              "Image_Inpainting": {
+                "score": 18926,
+                "pct": 76,
+                "desc": "928.4 Mpixels/sec"
+              },
+              "N-Body_Physics": {
+                "pct": 44,
+                "desc": "13.9 Mpairs/sec",
+                "score": 11081
+              },
+              "HDR": {
+                "desc": "336.7 Mpixels/sec",
+                "pct": 100,
+                "score": 24712
+              },
+              "AES-XTS": {
+                "desc": "33.3 GB/sec",
+                "score": 19530,
+                "pct": 79
+              },
+              "Ray_Tracing": {
+                "desc": "17.5 Mpixels/sec",
+                "pct": 88,
+                "score": 21759
+              },
+              "Horizon_Detection": {
+                "score": 13465,
+                "desc": "331.9 Mpixels/sec",
+                "pct": 54
+              },
+              "Face_Detection": {
+                "desc": "99.5 images/sec",
+                "score": 12925,
+                "pct": 52
+              },
+              "Gaussian_Blur": {
+                "pct": 54,
+                "score": 13517,
+                "desc": "743.0 Mpixels/sec"
+              },
+              "Camera": {
+                "score": 11165,
+                "desc": "129.4 images/sec",
+                "pct": 45
+              },
+              "PDF_Rendering": {
+                "score": 12173,
+                "desc": "660.6 Mpixels/sec",
+                "pct": 49
+              },
+              "Image_Compression": {
+                "desc": "616.2 Mpixels/sec",
+                "score": 13025,
+                "pct": 52
+              },
+              "SQLite": {
+                "desc": "3.77 Mrows/sec",
+                "score": 12029,
+                "pct": 48
+              },
+              "Speech_Recognition": {
+                "pct": 38,
+                "score": 9560,
+                "desc": "305.6 Words/sec"
+              },
+              "Clang": {
+                "pct": 55,
+                "score": 13636,
+                "desc": "106.2 Klines/sec"
+              },
+              "Rigid_Body_Physics": {
+                "score": 16786,
+                "desc": "103993.5 FPS",
+                "pct": 67
+              },
+              "Text_Compression": {
+                "desc": "68.5 MB/sec",
+                "pct": 54,
+                "score": 13535
+              },
+              "Machine_Learning": {
+                "pct": 17,
+                "score": 4278,
+                "desc": "165.3 images/sec"
+              }
+            }
+          }
+        }
       }
     },
     "temperature": {
@@ -327,9 +557,66 @@
     ],
     "benchmarks": {
       "geekbench5": {
-        "url": "https://browser.geekbench.com/v5/compute/6920300",
-        "score": 72889,
-        "api": "OpenCL"
+        "url": "https://browser.geekbench.com/v5/compute/6922771",
+        "score": 75365,
+        "api": "OpenCL",
+        "detail": {
+          "Histogram_Equalization": {
+            "score": 58084,
+            "desc": "10.2 Gpixels/sec",
+            "pct": 15
+          },
+          "Gaussian_Blur": {
+            "score": 65467,
+            "desc": "3.60 Gpixels/sec",
+            "pct": 17
+          },
+          "Sobel": {
+            "score": 93574,
+            "pct": 25,
+            "desc": "24.2 Gpixels/sec"
+          },
+          "Stereo_Matching": {
+            "desc": "324.0 Gpixels/sec",
+            "pct": 62,
+            "score": 229103
+          },
+          "Depth_of_Field": {
+            "desc": "2.03 Gpixels/sec",
+            "pct": 47,
+            "score": 175376
+          },
+          "Face_Detection": {
+            "desc": "182.2 images/sec",
+            "pct": 6,
+            "score": 23664
+          },
+          "Horizon_Detection": {
+            "score": 81843,
+            "pct": 22,
+            "desc": "2.02 Gpixels/sec"
+          },
+          "Particle_Physics": {
+            "desc": "9735.8 FPS",
+            "pct": 100,
+            "score": 365517
+          },
+          "Canny": {
+            "score": 58923,
+            "desc": "3.69 Gpixels/sec",
+            "pct": 16
+          },
+          "Feature_Matching": {
+            "desc": "555.4 Mpixels/sec",
+            "pct": 7,
+            "score": 26849
+          },
+          "SFFT": {
+            "score": 27826,
+            "pct": 7,
+            "desc": "383.3 Gflops"
+          }
+        }
       }
     },
     "temperature": {
