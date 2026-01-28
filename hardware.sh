@@ -4041,37 +4041,46 @@ gb_detail_json='{
 for k in "${!cpuinfo[@]}";do
 [[ $k != gb.* ]]&&continue
 IFS='.' read -r _ mode kind name sub <<<"$k"
+case "$mode" in
+s)mode_json="single";;
+m)mode_json="multi";;
+*)continue
+esac
 case "$kind" in
-g)gb_detail_json="$(jq --arg mode "$mode" \
+g)gb_detail_json="$(jq \
+--arg mode "$mode_json" \
 --arg name "$name" \
 --arg v "${cpuinfo[$k]}" \
 '
-                     .[$mode].groups[$name] = ($v | tonumber?)
-                     ' <<<"$gb_detail_json")"
+                    .[$mode].groups[$name] = ($v | tonumber?)
+                    ' <<<"$gb_detail_json")"
 ;;
 i)if
 [[ -z $sub ]]
 then
-gb_detail_json="$(jq --arg mode "$mode" \
+gb_detail_json="$(jq \
+--arg mode "$mode_json" \
 --arg name "$name" \
 --arg v "${cpuinfo[$k]}" \
 '
-                         .[$mode].items[$name].score = ($v | tonumber?)
-                         ' <<<"$gb_detail_json")"
+                        .[$mode].items[$name].score = ($v | tonumber?)
+                        ' <<<"$gb_detail_json")"
 elif [[ $sub == "desc" ]];then
-gb_detail_json="$(jq --arg mode "$mode" \
+gb_detail_json="$(jq \
+--arg mode "$mode_json" \
 --arg name "$name" \
 --arg v "${cpuinfo[$k]}" \
 '
-                         .[$mode].items[$name].desc = $v
-                         ' <<<"$gb_detail_json")"
+                        .[$mode].items[$name].desc = $v
+                        ' <<<"$gb_detail_json")"
 elif [[ $sub == "pct" ]];then
-gb_detail_json="$(jq --arg mode "$mode" \
+gb_detail_json="$(jq \
+--arg mode "$mode_json" \
 --arg name "$name" \
 --arg v "${cpuinfo[$k]}" \
 '
-                         .[$mode].items[$name].pct = ($v | tonumber?)
-                         ' <<<"$gb_detail_json")"
+                        .[$mode].items[$name].pct = ($v | tonumber?)
+                        ' <<<"$gb_detail_json")"
 fi
 esac
 done
