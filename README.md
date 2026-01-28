@@ -22,9 +22,13 @@
 - Json输出便于大数据分析
 
 #### 屏幕截图
-|标准测试|硬盘模式|
+|标准测试|
+| ---------------- |
+|![test](https://github.com/xykt/HardwareQuality/raw/main/res/test_cn.png)|
+
+|硬盘模式|深度模式|
 | ---------------- | ---------------- |
-|![test](https://github.com/xykt/HardwareQuality/raw/main/res/test_cn.png)|![disk](https://github.com/xykt/HardwareQuality/raw/main/res/disk_cn.png)|
+|![disk](https://github.com/xykt/HardwareQuality/raw/main/res/disk_cn.png)|![disk](https://github.com/xykt/HardwareQuality/raw/main/res/verbose_cn.png)|
 
 ## 使用方法
 
@@ -66,6 +70,11 @@ bash <(curl -Ls https://Hardware.Check.Place) -F
 ##### 硬盘模式：
 ````bash
 bash <(curl -Ls https://Hardware.Check.Place) -D
+````
+
+##### 深度模式：
+````bash
+bash <(curl -Ls https://Hardware.Check.Place) -V
 ````
 
 ##### 指定硬盘检测路径：
@@ -129,6 +138,8 @@ docker run --rm -it --privileged xykt/hardwarequality & docker rmi xykt/hardware
 *Windows架构限制无法获得完整硬件信息*
 
 ## 脚本更新
+
+2026/01/28 20:00 更新深度模式，展示全部测试细节
 
 2026/01/16 00:00 脚本发布
 
