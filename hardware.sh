@@ -1,5 +1,5 @@
 #!/bin/bash
-script_version="v2026-02-04"
+script_version="v2026-02-05"
 check_bash(){
 current_bash_version=$(bash --version|head -n 1|awk -F ' ' '{for (i=1; i<=NF; i++) if ($i ~ /^[0-9]+\.[0-9]+\.[0-9]+/) {print $i; exit}}'|cut -d . -f 1)
 if [ "$current_bash_version" = "0" ]||[ "$current_bash_version" = "1" ]||[ "$current_bash_version" = "2" ]||[ "$current_bash_version" = "3" ];then
@@ -3562,10 +3562,10 @@ fi
 fi
 case "${diskinfo[disk$i.smart_pass]}" in
 PASSED)smartline[$i]+="$Back_Green$Font_White PASSED $Font_Suffix$Back_White"
-smartlen[$i]=$((smartlen[$i]-15))
+smartlen[$i]=$((smartlen[$i]-19))
 ;;
 FAILED)smartline[$i]+="$Back_Red$Font_White FAILED $Font_Suffix$Back_White"
-smartlen[$i]=$((smartlen[$i]-15))
+smartlen[$i]=$((smartlen[$i]-19))
 esac
 smartline[$i]="${smartline[$i]%, }"
 smartlen[$i]=$((smartlen[$i]+$(echo -en "${smartline[$i]}"|wc -c)+8))
