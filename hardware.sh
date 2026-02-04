@@ -1,5 +1,5 @@
 #!/bin/bash
-script_version="v2026-01-28"
+script_version="v2026-02-04"
 check_bash(){
 current_bash_version=$(bash --version|head -n 1|awk -F ' ' '{for (i=1; i<=NF; i++) if ($i ~ /^[0-9]+\.[0-9]+\.[0-9]+/) {print $i; exit}}'|cut -d . -f 1)
 if [ "$current_bash_version" = "0" ]||[ "$current_bash_version" = "1" ]||[ "$current_bash_version" = "2" ]||[ "$current_bash_version" = "3" ];then
@@ -2426,24 +2426,24 @@ local size_b
 size_b=$(fio_probe_size "$tf" "$try_b" "$min_b")||return
 if [[ $mode_disk -eq 0 && mode_verbose -eq 0 ]];then
 local tests=(
-"4k_q1   randread   4k   1"
-"4k_q32  randread   4k   32"
-"seq_q1  read       1M   1"
-"seq_q8  read       1M   8"
-"4k_q1   randwrite  4k   1"
-"4k_q32  randwrite  4k   32"
-"seq_q1  write      1M   1"
-"seq_q8  write      1M   8")
+"4K_q1   randread   4K   1"
+"4K_q32  randread   4K   32"
+"1M_q1   read       1M   1"
+"1M_q8   read       1M   8"
+"4K_q1   randwrite  4K   1"
+"4K_q32  randwrite  4K   32"
+"1M_q1   write      1M   1"
+"1M_q8   write      1M   8")
 else
 local tests=(
-"4k_q1   randread   4k   1"
-"4k_q32  randread   4k   32"
-"seq_q1  read       1M   1"
-"seq_q8  read       1M   8"
-"4k_q1   randwrite  4k   1"
-"4k_q32  randwrite  4k   32"
-"seq_q1  write      1M   1"
-"seq_q8  write      1M   8"
+"4K_q1   randread   4K   1"
+"4K_q32  randread   4K   32"
+"1M_q1   read       1M   1"
+"1M_q8   read       1M   8"
+"4K_q1   randwrite  4K   1"
+"4K_q32  randwrite  4K   32"
+"1M_q1   write      1M   1"
+"1M_q8   write      1M   8"
 "512B_q4   read   512B   4"
 "1K_q4     read   1K     4"
 "2K_q4     read   2K     4"
@@ -3180,19 +3180,19 @@ fio_bar_color(){
 local mb="$1"
 local scenario="$2"
 case "$scenario" in
-rnd4k_q1)(($(awk "BEGIN{print ($mb < 5)}")))&&echo "$Back_Red"&&return
+rnd4K_q1)(($(awk "BEGIN{print ($mb < 5)}")))&&echo "$Back_Red"&&return
 (($(awk "BEGIN{print ($mb < 50)}")))&&echo "$Back_Yellow"&&return
 echo "$Back_Green"
 ;;
-rnd4k_q32)(($(awk "BEGIN{print ($mb < 20)}")))&&echo "$Back_Red"&&return
+rnd4K_q32)(($(awk "BEGIN{print ($mb < 20)}")))&&echo "$Back_Red"&&return
 (($(awk "BEGIN{print ($mb < 500)}")))&&echo "$Back_Yellow"&&return
 echo "$Back_Green"
 ;;
-seq_q1)(($(awk "BEGIN{print ($mb < 100)}")))&&echo "$Back_Red"&&return
+seq1M_q1)(($(awk "BEGIN{print ($mb < 100)}")))&&echo "$Back_Red"&&return
 (($(awk "BEGIN{print ($mb < 1000)}")))&&echo "$Back_Yellow"&&return
 echo "$Back_Green"
 ;;
-seq_q8)(($(awk "BEGIN{print ($mb < 150)}")))&&echo "$Back_Red"&&return
+seq1M_q8)(($(awk "BEGIN{print ($mb < 150)}")))&&echo "$Back_Red"&&return
 (($(awk "BEGIN{print ($mb < 2000)}")))&&echo "$Back_Yellow"&&return
 echo "$Back_Green"
 ;;
@@ -3250,19 +3250,19 @@ fio_font_color(){
 local mb="$1"
 local scenario="$2"
 case "$scenario" in
-rnd4k_q1)(($(awk "BEGIN{print ($mb < 5)}")))&&echo "$Font_Red"&&return
+rnd4K_q1)(($(awk "BEGIN{print ($mb < 5)}")))&&echo "$Font_Red"&&return
 (($(awk "BEGIN{print ($mb < 50)}")))&&echo "$Font_Yellow"&&return
 echo "$Font_Green"
 ;;
-rnd4k_q32)(($(awk "BEGIN{print ($mb < 20)}")))&&echo "$Font_Red"&&return
+rnd4K_q32)(($(awk "BEGIN{print ($mb < 20)}")))&&echo "$Font_Red"&&return
 (($(awk "BEGIN{print ($mb < 500)}")))&&echo "$Font_Yellow"&&return
 echo "$Font_Green"
 ;;
-seq_q1)(($(awk "BEGIN{print ($mb < 100)}")))&&echo "$Font_Red"&&return
+seq1M_q1)(($(awk "BEGIN{print ($mb < 100)}")))&&echo "$Font_Red"&&return
 (($(awk "BEGIN{print ($mb < 1000)}")))&&echo "$Font_Yellow"&&return
 echo "$Font_Green"
 ;;
-seq_q8)(($(awk "BEGIN{print ($mb < 150)}")))&&echo "$Font_Red"&&return
+seq1M_q8)(($(awk "BEGIN{print ($mb < 150)}")))&&echo "$Font_Red"&&return
 (($(awk "BEGIN{print ($mb < 2000)}")))&&echo "$Font_Yellow"&&return
 echo "$Font_Green"
 ;;
@@ -3608,7 +3608,7 @@ fi
 done
 fi
 if [[ $mode_disk -eq 0 && mode_verbose -eq 0 ]];then
-if [[ -n ${diskinfo[fio.randread.4k_q1.bw]} ]];then
+if [[ -n ${diskinfo[fio.randread.4K_q1.bw]} ]];then
 if [[ -n ${diskinfo[testdir]} ]];then
 local extra=""
 if [[ -n ${diskinfo[testdev]} ]];then
@@ -3624,19 +3624,19 @@ echo -ne "\r$Font_Cyan${sdisk[dir]}$Font_Green$extra$Font_Suffix\n"
 fi
 echo -ne "\r$Font_Cyan${sdisk[fio]}RND4K/Q1    IOPS||RND4K/Q32   IOPS||SEQ1M/Q1    IOPS||SEQ1M/Q8    IOPS$Font_Suffix\n"
 local c1 c2 c3 c4
-c1="$(fmt_fio_cell "${diskinfo[fio.randread.4k_q1.bw]}" "${diskinfo[fio.randread.4k_q1.iops]}" rnd4k_q1)"
-c2="$(fmt_fio_cell "${diskinfo[fio.randread.4k_q32.bw]}" "${diskinfo[fio.randread.4k_q32.iops]}" rnd4k_q32)"
-c3="$(fmt_fio_cell "${diskinfo[fio.read.seq_q1.bw]}" "${diskinfo[fio.read.seq_q1.iops]}" seq_q1)"
-c4="$(fmt_fio_cell "${diskinfo[fio.read.seq_q8.bw]}" "${diskinfo[fio.read.seq_q8.iops]}" seq_q8)"
+c1="$(fmt_fio_cell "${diskinfo[fio.randread.4K_q1.bw]}" "${diskinfo[fio.randread.4K_q1.iops]}" rnd4K_q1)"
+c2="$(fmt_fio_cell "${diskinfo[fio.randread.4K_q32.bw]}" "${diskinfo[fio.randread.4K_q32.iops]}" rnd4K_q32)"
+c3="$(fmt_fio_cell "${diskinfo[fio.read.1M_q1.bw]}" "${diskinfo[fio.read.1M_q1.iops]}" seq1M_q1)"
+c4="$(fmt_fio_cell "${diskinfo[fio.read.1M_q8.bw]}" "${diskinfo[fio.read.1M_q8.iops]}" seq1M_q8)"
 echo -ne "\r$Font_Cyan${sdisk[read]}$Font_Suffix$c1$Font_Cyan||$Font_Suffix$c2$Font_Cyan||$Font_Suffix$c3$Font_Cyan||$Font_Suffix$c4\n"
-c1="$(fmt_fio_cell "${diskinfo[fio.randwrite.4k_q1.bw]}" "${diskinfo[fio.randwrite.4k_q1.iops]}" rnd4k_q1)"
-c2="$(fmt_fio_cell "${diskinfo[fio.randwrite.4k_q32.bw]}" "${diskinfo[fio.randwrite.4k_q32.iops]}" rnd4k_q32)"
-c3="$(fmt_fio_cell "${diskinfo[fio.write.seq_q1.bw]}" "${diskinfo[fio.write.seq_q1.iops]}" seq_q1)"
-c4="$(fmt_fio_cell "${diskinfo[fio.write.seq_q8.bw]}" "${diskinfo[fio.write.seq_q8.iops]}" seq_q8)"
+c1="$(fmt_fio_cell "${diskinfo[fio.randwrite.4K_q1.bw]}" "${diskinfo[fio.randwrite.4K_q1.iops]}" rnd4K_q1)"
+c2="$(fmt_fio_cell "${diskinfo[fio.randwrite.4K_q32.bw]}" "${diskinfo[fio.randwrite.4K_q32.iops]}" rnd4K_q32)"
+c3="$(fmt_fio_cell "${diskinfo[fio.write.1M_q1.bw]}" "${diskinfo[fio.write.1M_q1.iops]}" seq1M_q1)"
+c4="$(fmt_fio_cell "${diskinfo[fio.write.1M_q8.bw]}" "${diskinfo[fio.write.1M_q8.iops]}" seq1M_q8)"
 echo -ne "\r$Font_Cyan${sdisk[write]}$Font_Suffix$c1$Font_Cyan||$Font_Suffix$c2$Font_Cyan||$Font_Suffix$c3$Font_Cyan||$Font_Suffix$c4\n"
 fi
 else
-if [[ -n ${diskinfo[fio.randread.4k_q1.bw]} ]];then
+if [[ -n ${diskinfo[fio.randread.4K_q1.bw]} ]];then
 if [[ -n ${diskinfo[testdir]} ]];then
 local extra=""
 if [[ -n ${diskinfo[testdev]} ]];then
@@ -3652,15 +3652,15 @@ echo -ne "\r$Font_Cyan${sdisk[dir]}$Font_Green$extra$Font_Suffix\n"
 fi
 echo -ne "\r$Font_Cyan${sdisk[crystal]}RND4K/Q1    IOPS||RND4K/Q32   IOPS||SEQ1M/Q1    IOPS||SEQ1M/Q8    IOPS$Font_Suffix\n"
 local c1 c2 c3 c4
-c1="$(fmt_fio_cell "${diskinfo[fio.randread.4k_q1.bw]}" "${diskinfo[fio.randread.4k_q1.iops]}" rnd4k_q1)"
-c2="$(fmt_fio_cell "${diskinfo[fio.randread.4k_q32.bw]}" "${diskinfo[fio.randread.4k_q32.iops]}" rnd4k_q32)"
-c3="$(fmt_fio_cell "${diskinfo[fio.read.seq_q1.bw]}" "${diskinfo[fio.read.seq_q1.iops]}" seq_q1)"
-c4="$(fmt_fio_cell "${diskinfo[fio.read.seq_q8.bw]}" "${diskinfo[fio.read.seq_q8.iops]}" seq_q8)"
+c1="$(fmt_fio_cell "${diskinfo[fio.randread.4K_q1.bw]}" "${diskinfo[fio.randread.4K_q1.iops]}" rnd4K_q1)"
+c2="$(fmt_fio_cell "${diskinfo[fio.randread.4K_q32.bw]}" "${diskinfo[fio.randread.4K_q32.iops]}" rnd4K_q32)"
+c3="$(fmt_fio_cell "${diskinfo[fio.read.1M_q1.bw]}" "${diskinfo[fio.read.1M_q1.iops]}" seq1M_q1)"
+c4="$(fmt_fio_cell "${diskinfo[fio.read.1M_q8.bw]}" "${diskinfo[fio.read.1M_q8.iops]}" seq1M_q8)"
 echo -ne "\r$Font_Cyan${sdisk[read]}$Font_Suffix$c1$Font_Cyan||$Font_Suffix$c2$Font_Cyan||$Font_Suffix$c3$Font_Cyan||$Font_Suffix$c4\n"
-c1="$(fmt_fio_cell "${diskinfo[fio.randwrite.4k_q1.bw]}" "${diskinfo[fio.randwrite.4k_q1.iops]}" rnd4k_q1)"
-c2="$(fmt_fio_cell "${diskinfo[fio.randwrite.4k_q32.bw]}" "${diskinfo[fio.randwrite.4k_q32.iops]}" rnd4k_q32)"
-c3="$(fmt_fio_cell "${diskinfo[fio.write.seq_q1.bw]}" "${diskinfo[fio.write.seq_q1.iops]}" seq_q1)"
-c4="$(fmt_fio_cell "${diskinfo[fio.write.seq_q8.bw]}" "${diskinfo[fio.write.seq_q8.iops]}" seq_q8)"
+c1="$(fmt_fio_cell "${diskinfo[fio.randwrite.4K_q1.bw]}" "${diskinfo[fio.randwrite.4K_q1.iops]}" rnd4K_q1)"
+c2="$(fmt_fio_cell "${diskinfo[fio.randwrite.4K_q32.bw]}" "${diskinfo[fio.randwrite.4K_q32.iops]}" rnd4K_q32)"
+c3="$(fmt_fio_cell "${diskinfo[fio.write.1M_q1.bw]}" "${diskinfo[fio.write.1M_q1.iops]}" seq1M_q1)"
+c4="$(fmt_fio_cell "${diskinfo[fio.write.1M_q8.bw]}" "${diskinfo[fio.write.1M_q8.iops]}" seq1M_q8)"
 echo -ne "\r$Font_Cyan${sdisk[write]}$Font_Suffix$c1$Font_Cyan||$Font_Suffix$c2$Font_Cyan||$Font_Suffix$c3$Font_Cyan||$Font_Suffix$c4\n"
 fi
 if [[ -n ${diskinfo[fio.read.512B_q4.bw]} ]];then
