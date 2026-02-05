@@ -4053,7 +4053,7 @@ return
 }
 local pad=$(((w-len)/2))
 local rest=$((w-len-pad))
-echo -n "$(printf "%*s" "$rest" "")$s$(printf "%*s" "$pad" "")"
+echo -n "$(printf "%*s" "$pad" "")$s$(printf "%*s" "$rest" "")"
 }
 local BOX="$Back_Cyan$Font_White$Font_B"
 local OP="$Font_Cyan$Font_B"
