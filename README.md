@@ -139,6 +139,8 @@ docker run --rm -it --privileged xykt/hardwarequality & docker rmi xykt/hardware
 
 ## 脚本更新
 
+2026/02/05 16:50 增加HQ硬件加权评分功能
+
 2026/01/28 20:00 更新深度模式，展示全部测试细节
 
 2026/01/16 00:00 脚本发布
