@@ -1121,5 +1121,17 @@
         }
       }
     }
+  },
+  "Benchmark": {
+    "total": 273193,
+    "cpu": 86361,
+    "gpu": 41357,
+    "memory": 86044,
+    "disk": 59431,
+    "total_pct": 84.1,
+    "cpu_pct": 77.8,
+    "gpu_pct": 45.5,
+    "memory_pct": 76.4,
+    "disk_pct": 86.8
   }
 }
