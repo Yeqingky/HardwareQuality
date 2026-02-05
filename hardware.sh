@@ -49,6 +49,7 @@ declare -A cpuinfo
 declare -A gpuinfo
 declare -A meminfo
 declare -A diskinfo
+declare -A markinfo
 declare -A sinfo
 declare -A shead
 declare -A sos
@@ -57,6 +58,7 @@ declare -A scpu
 declare -A sgpu
 declare -A smem
 declare -A sdisk
+declare -A smark
 declare -A stail
 declare mode_no=0
 declare mode_yes=0
@@ -276,6 +278,16 @@ sdisk[lavail]=0
 sdisk[lpo]=0
 sdisk[llf]=0
 sdisk[lsp]=0
+smark[title]="7. HQ Weighted Hardware Benchmark"
+smark[item]="Items:    "
+smark[mark]="Score:    "
+smark[pct]="Ranking:  "
+smark[total]="Total"
+smark[mem]="Memory"
+smark[disk]="Disk"
+smark[ltotal]=5
+smark[lmem]=6
+smark[ldisk]=4
 stail[stoday]="Hardware Checks Today: "
 stail[stotal]="; Total: "
 stail[thanks]=". Thanks for running xy scripts!"
@@ -456,6 +468,16 @@ sdisk[lavail]=4
 sdisk[lpo]=3
 sdisk[llf]=1
 sdisk[lsp]=1
+smark[title]="七、HQ硬件加权评分"
+smark[item]="项目：    "
+smark[mark]="分数：    "
+smark[pct]="排名：    "
+smark[total]="总 分"
+smark[mem]="内 存"
+smark[disk]="硬 盘"
+smark[ltotal]=5
+smark[lmem]=5
+smark[ldisk]=5
 stail[stoday]="今日硬件检测量："
 stail[stotal]="；总检测量："
 stail[thanks]="。感谢使用xy系列脚本！"
@@ -1434,7 +1456,15 @@ if command -v geekbench5 &>/dev/null;then
 local url score
 url="$(geekbench5 --cpu 2>&1|tee >(cat >&4)|grep -oE 'https://browser\.geekbench\.com/v5/cpu/[0-9]+'|head -n 1)" >/dev/null
 if [[ -n $url ]];then
-local tmpresu="$(curl -sL -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" "$url")"
+local tmpresu=""
+local attempt
+for ((attempt=1; attempt<=5; attempt++));do
+tmpresu="$(curl -sL --max-time 10 -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" "$url")"
+if [[ -n $tmpresu ]]&&grep -q "<div class='score'>" <<<"$tmpresu";then
+break
+fi
+sleep 1
+done
 parse_geekbench_cpu_html "$tmpresu"
 local scores=($(echo "$tmpresu"|grep -o "<div class='score'>[0-9]\+</div>"|sed 's/[^0-9]//g'))
 local single_score="${scores[0]}"
@@ -1713,7 +1743,15 @@ if [[ ${gpuinfo[has_dgpu]} == "1" ]]&&command -v geekbench5 &>/dev/null;then
 local url score
 url="$(geekbench5 --compute 2>&1|tee >(cat >&4)|grep -oE 'https://browser\.geekbench\.com/v5/compute/[0-9]+'|head -n 1)" >/dev/null
 if [[ -n $url ]];then
-local tmpresu="$(curl -sL -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" "$url")"
+local tmpresu=""
+local attempt
+for ((attempt=1; attempt<=5; attempt++));do
+tmpresu="$(curl -sL --max-time 10 -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" "$url")"
+if [[ -n $tmpresu ]]&&grep -q "<div class='score'>" <<<"$tmpresu";then
+break
+fi
+sleep 1
+done
 parse_geekbench_gpu_html "$tmpresu"
 score="$(echo "$tmpresu"|grep -o "<div class='score'>[0-9]\+</div>"|sed 's/[^0-9]//g'|head -n 1)"
 score_type="$(echo "$tmpresu"|grep -o "<div class='note'>[^<]*</div>"|head -n 1|sed -E "s@<div class='note'>([^[:space:]]+).*@\1@")"
@@ -2549,6 +2587,326 @@ calc_padding "${shead[bash]}" 80
 echo -ne "\r$PADDING${shead[bash]}\n"
 echo -ne "\r${shead[ptime]}${shead[time]}  ${shead[ver]}\n"
 echo -ne "\r$(printf '%80s'|tr ' ' '+')\n"
+}
+mark_cpu(){
+local GB5M="${cpuinfo[geekbench_multi]:-0}"
+local GB5S="${cpuinfo[geekbench_single]:-0}"
+local T="${cpuinfo[cg_threads]:-0}"
+local A=42000
+local B=6000
+local C=3
+local D=21000
+local gb5_multi_norm
+local gb5_single_norm
+local base_score
+gb5_multi_norm=$(bc -l <<EOF
+$A * (1 - e(-$GB5M / $B)) + $C * $GB5M
+EOF
+)
+gb5_single_norm=$(bc -l <<EOF
+$D * (1 - e(-$GB5S / $B))
+EOF
+)
+base_score=$(bc -l <<EOF
+$gb5_multi_norm + $gb5_single_norm
+EOF
+)
+local factor=1.0
+((cpuinfo[vt]))&&factor=$(bc -l <<<"$factor * 1.03")
+((cpuinfo[aes]))&&factor=$(bc -l <<<"$factor * 1.04")
+((cpuinfo[avx2]))&&factor=$(bc -l <<<"$factor * 1.05")
+((cpuinfo[bmi]))&&factor=$(bc -l <<<"$factor * 1.02")
+((cpuinfo[ept]))&&factor=$(bc -l <<<"$factor * 1.02")
+((cpuinfo[el2]))&&factor=$(bc -l <<<"$factor * 1.03")
+((cpuinfo[neon]))&&factor=$(bc -l <<<"$factor * 1.02")
+((cpuinfo[aes_sha]))&&factor=$(bc -l <<<"$factor * 1.04")
+((cpuinfo[atomics]))&&factor=$(bc -l <<<"$factor * 1.02")
+((cpuinfo[sve]))&&factor=$(bc -l <<<"$factor * 1.05")
+local penalty
+local cgroup_factor
+if ((T<=0));then
+penalty=0
+elif ((T>=500));then
+penalty=0.2
+else
+penalty=$(bc -l <<EOF
+x = (500 - $T) / 450
+p = 0.20 + 0.50 * e(1.3 * l(x))
+if (p > 0.70) p = 0.70
+p
+EOF
+)
+fi
+cgroup_factor=$(bc -l <<<"1 - $penalty")
+local final_score
+final_score=$(bc -l <<EOF
+$base_score * $factor * $cgroup_factor
+EOF
+)
+printf "%.0f\n" "$final_score"
+}
+mark_gpu(){
+local GB5_GPU="${gpuinfo[geekbench]:-0}"
+local GPU_base
+local VRAM_sum=0
+local GPU_count=0
+GPU_base=$(bc -l <<<"$GB5_GPU * 0.8")
+local i=0
+while :;do
+local vram_key="item$i.vram_gb"
+[[ -z ${gpuinfo[$vram_key]+x} ]]&&break
+VRAM_sum=$(bc -l <<<"$VRAM_sum + ${gpuinfo[$vram_key]}")
+((GPU_count++))
+((i++))
+done
+if ((GPU_count==0));then
+printf "%.0f\n" "$GPU_base"
+return
+fi
+local VRAM_avg
+VRAM_avg=$(bc -l <<<"$VRAM_sum / $GPU_count")
+local VRAM_factor
+VRAM_factor=$(bc -l <<EOF
+x = $VRAM_avg / 12
+f = 1 + 0.15 * (l(x) / l(2))
+if (f < 0.70) f = 0.70
+if (f > 1.30) f = 1.30
+f
+EOF
+)
+local GPU_score
+GPU_score=$(bc -l <<<"$GPU_base * $VRAM_factor")
+printf "%.0f\n" "$GPU_score"
+}
+mark_mem(){
+local READ_MBPS="${meminfo[read]:-0}"
+local WRITE_MBPS="${meminfo[write]:-0}"
+local LAT_NS="${meminfo[lat]:-0}"
+local MEM_KB="${meminfo[mem_total_kb]:-0}"
+local BALLOON="${meminfo[balloon]:-0}"
+local KSM="${meminfo[ksm]:-0}"
+local BASE=50000
+local MEM_GB
+MEM_GB=$(bc -l <<<"$MEM_KB / 1024 / 1024")
+local Capacity_factor
+Capacity_factor=$(bc -l <<EOF
+x = $MEM_GB / 16 + 1
+if (x <= 0) {
+    f = 0
+} else {
+    f = e(0.6 * l(l(x) / l(2)))
+}
+f
+EOF
+)
+local BW_factor
+BW_factor=$(bc -l <<EOF
+if ($READ_MBPS <= 0 || $WRITE_MBPS <= 0) {
+    f = 0
+} else {
+    bw = sqrt(($READ_MBPS / 25000) * ($WRITE_MBPS / 25000))
+    f = e(0.75 * l(bw))
+}
+f
+EOF
+)
+local Latency_factor
+if (($(bc -l <<<"$LAT_NS > 0")));then
+Latency_factor=$(bc -l <<<"100 / $LAT_NS")
+else
+Latency_factor=0
+fi
+local Memory_perf_factor
+Memory_perf_factor=$(bc -l <<<"0.6 * $BW_factor + 0.4 * $Latency_factor")
+local Memory_score
+Memory_score=$(bc -l <<<"$BASE * $Capacity_factor * $Memory_perf_factor")
+local penalty_factor=1.0
+((BALLOON))&&penalty_factor=$(bc -l <<<"$penalty_factor * 0.80")
+((KSM))&&penalty_factor=$(bc -l <<<"$penalty_factor * 0.50")
+Memory_score=$(bc -l <<<"$Memory_score * $penalty_factor")
+printf "%.0f\n" "$Memory_score"
+}
+calc_capacity(){
+local gb="$1"
+bc -l <<<"
+x = $gb / 1024 + 1
+if (x <= 1) {
+    0
+} else {
+    base = e(0.6 * l(l(x) / l(2)))
+    bonus = 1 + 0.25 * (l(x) / l(2))
+    base * bonus
+}"
+}
+mark_disk(){
+local BASE=80000
+local DISK_B="${diskinfo[total]:-0}"
+local R_SEQ="${diskinfo[fio.read.1M_q8.bw]:-0}"
+local W_SEQ="${diskinfo[fio.write.1M_q8.bw]:-0}"
+local RR_Q32="${diskinfo[fio.randread.4K_q32.iops]:-0}"
+local RW_Q32="${diskinfo[fio.randwrite.4K_q32.iops]:-0}"
+local RR_Q1="${diskinfo[fio.randread.4K_q1.iops]:-0}"
+local has_hdd=0
+local has_ssd=0
+local has_nvme=0
+local HDD_GB=0
+local SSD_GB=0
+local NVME_GB=0
+local i=0
+while :;do
+local type_key="disk$i.type"
+local cap_key="disk$i.capacity"
+[[ -z ${diskinfo[$type_key]+x} ]]&&break
+local dtype="${diskinfo[$type_key]}"
+local cap="${diskinfo[$cap_key]}"
+local val=$(echo "$cap"|grep -oE '[0-9.]+')
+local unit=$(echo "$cap"|grep -oE '[A-Za-z]+')
+local gb=0
+case "$unit" in
+MB)gb=$(bc -l <<<"$val/1024");;
+GB)gb="$val";;
+TB)gb=$(bc -l <<<"$val*1024");;
+PB)gb=$(bc -l <<<"$val*1024*1024")
+esac
+case "$dtype" in
+HDD)has_hdd=1
+HDD_GB=$(bc -l <<<"$HDD_GB+$gb")
+;;
+NVMe)has_nvme=1
+NVME_GB=$(bc -l <<<"$NVME_GB+$gb")
+;;
+*)has_ssd=1
+SSD_GB=$(bc -l <<<"$SSD_GB+$gb")
+esac
+((i++))
+done
+if ((!has_hdd||(!has_ssd&&!has_nvme)));then
+local DISK_GB
+DISK_GB=$(bc -l <<<"$DISK_B / 1024 / 1024 / 1024")
+local Disk_capacity_factor
+Disk_capacity_factor=$(bc -l <<EOF
+x = $DISK_GB / 1024 + 1
+if (x <= 1) {
+    f = 0
+} else {
+    base = e(0.6 * l(l(x) / l(2)))
+    bonus = 1 + 0.25 * (l(x) / l(2))
+    f = base * bonus
+}
+f
+EOF
+)
+local Seq_factor
+if (($(bc -l <<<"($R_SEQ>0)*($W_SEQ>0)")));then
+Seq_factor=$(bc -l <<<"e(0.3*l(sqrt($R_SEQ*$W_SEQ)/500000))")
+else
+Seq_factor=0
+fi
+local Rand_factor
+if (($(bc -l <<<"($RR_Q32>0)*($RW_Q32>0)")));then
+Rand_factor=$(bc -l <<<"e(0.3*l(sqrt($RR_Q32*$RW_Q32)/50000))")
+else
+Rand_factor=0
+fi
+local Latency_factor
+if (($(bc -l <<<"$RR_Q1>0")));then
+Latency_factor=$(bc -l <<<"e(0.3*l($RR_Q1/8000))")
+else
+Latency_factor=0
+fi
+local Disk_perf_factor
+Disk_perf_factor=$(bc -l <<<"0.4*$Seq_factor + 0.4*$Rand_factor + 0.2*$Latency_factor")
+local Disk_score
+Disk_score=$(bc -l <<<"$BASE*0.20*$Disk_capacity_factor*$Disk_perf_factor")
+printf "%.0f\n" "$Disk_score"
+return
+fi
+local Seq_factor Rand_factor Latency_factor
+if (($(bc -l <<<"($R_SEQ>0)*($W_SEQ>0)")));then
+Seq_factor=$(bc -l <<<"e(0.3*l(sqrt($R_SEQ*$W_SEQ)/500000))")
+else
+Seq_factor=0.8
+fi
+if (($(bc -l <<<"($RR_Q32>0)*($RW_Q32>0)")));then
+Rand_factor=$(bc -l <<<"e(0.3*l(sqrt($RR_Q32*$RW_Q32)/50000))")
+else
+Rand_factor=0.8
+fi
+if (($(bc -l <<<"$RR_Q1>0")));then
+Latency_factor=$(bc -l <<<"e(0.3*l($RR_Q1/8000))")
+else
+Latency_factor=0.8
+fi
+local Disk_perf_factor
+Disk_perf_factor=$(bc -l <<<"0.4*$Seq_factor + 0.4*$Rand_factor + 0.2*$Latency_factor")
+local HDD_perf SSD_perf NVME_perf
+if (($(bc -l <<<"$Disk_perf_factor < 0.85")));then
+HDD_perf="$Disk_perf_factor"
+SSD_perf=1
+NVME_perf=1.5
+elif (($(bc -l <<<"$Disk_perf_factor > 1.3")));then
+HDD_perf=0.6
+SSD_perf=1
+NVME_perf="$Disk_perf_factor"
+else
+HDD_perf=0.6
+SSD_perf="$Disk_perf_factor"
+NVME_perf=1.5
+fi
+local HDD_cap SSD_cap NVME_cap
+HDD_cap=$(calc_capacity "$HDD_GB")
+SSD_cap=$(calc_capacity "$SSD_GB")
+NVME_cap=$(calc_capacity "$NVME_GB")
+local HDD_score SSD_score NVME_score
+HDD_score=$(bc -l <<<"$BASE*0.20*$HDD_cap*$HDD_perf")
+SSD_score=$(bc -l <<<"$BASE*0.20*$SSD_cap*$SSD_perf")
+NVME_score=$(bc -l <<<"$BASE*0.20*$NVME_cap*$NVME_perf")
+local Disk_score
+Disk_score=$(bc -l <<<"$HDD_score + $SSD_score + $NVME_score")
+printf "%.0f\n" "$Disk_score"
+}
+get_mark(){
+if [[ $mode_skip != *"3"* && -n ${cpuinfo[geekbench_multi]} ]];then
+markinfo[cpu]=$(mark_cpu)
+fi
+if [[ $mode_skip != *"4"* && -n ${gpuinfo[geekbench]} ]];then
+markinfo[gpu]=$(mark_gpu)
+fi
+if [[ $mode_skip != *"5"* && -n ${meminfo[mem_total_kb]} ]];then
+markinfo[mem]=$(mark_mem)
+fi
+if [[ $mode_skip != *"6"* && -n ${diskinfo[total]} ]];then
+markinfo[disk]=$(mark_disk)
+fi
+local total=0
+local count=0
+for k in cpu gpu mem disk;do
+if [[ -n ${markinfo[$k]} ]];then
+total=$(bc <<<"$total + ${markinfo[$k]}")
+((count++))
+fi
+done
+markinfo[total]="$total"
+markinfo[count]="$count"
+local payload="{"
+local first=1
+for k in cpu gpu mem disk total;do
+if [[ -n ${markinfo[$k]} ]];then
+[[ $first -eq 0 ]]&&payload+=","
+payload+="\"${k}_score\":${markinfo[$k]}"
+first=0
+fi
+done
+payload+="}"
+local resp
+resp=$(curl -fsS --max-time 10 -H "Content-Type: application/json" -d "$payload" https://mark.check.place 2>/dev/null)||return
+for k in cpu gpu mem disk total;do
+if [[ -n ${markinfo[$k]} ]];then
+local pct
+pct=$(jq -r ".$k.percentile // empty" <<<"$resp")
+[[ -n $pct ]]&&markinfo["${k}_pct"]="$pct"
+fi
+done
 }
 show_os(){
 echo -ne "\r${sos[title]}\n"
@@ -3682,6 +4040,61 @@ done
 fi
 fi
 }
+show_mark(){
+[[ ${markinfo[total]:-0} == 0 ]]&&return
+_center9(){
+local s="$1"
+local w=9
+local len=${#s}
+[[ -n $2 ]]&&len=$2
+((len>=w))&&{
+echo -n "$s"
+return
+}
+local pad=$(((w-len)/2))
+local rest=$((w-len-pad))
+echo -n "$(printf "%*s" "$rest" "")$s$(printf "%*s" "$pad" "")"
+}
+local BOX="$Back_Cyan$Font_White$Font_B"
+local OP="$Font_Cyan$Font_B"
+local RST="$Font_Suffix"
+echo -ne "\r${smark[title]}\n"
+echo -ne "\r$Font_Cyan${smark[item]}"
+echo -ne "$(_center9 "${smark[total]}" "${smark[ltotal]}")"
+echo -ne "     "
+echo -ne "$(_center9 "CPU")"
+echo -ne "     "
+echo -ne "$(_center9 "GPU")"
+echo -ne "     "
+echo -ne "$(_center9 "${smark[mem]}" "${smark[lmem]}")"
+echo -ne "     "
+echo -ne "$(_center9 "${smark[disk]}" "${smark[ldisk]}")$RST\n"
+echo -ne "\r$Font_Cyan${smark[mark]}$RST"
+echo -ne "$BOX$(_center9 "${markinfo[total]:-N/A}")$RST"
+echo -ne "  $OP=$RST  "
+echo -ne "$BOX$(_center9 "${markinfo[cpu]:-N/A}")$RST"
+echo -ne "  $OP+$RST  "
+echo -ne "$BOX$(_center9 "${markinfo[gpu]:-N/A}")$RST"
+echo -ne "  $OP+$RST  "
+echo -ne "$BOX$(_center9 "${markinfo[mem]:-N/A}")$RST"
+echo -ne "  $OP+$RST  "
+echo -ne "$BOX$(_center9 "${markinfo[disk]:-N/A}")$RST\n"
+_fmt_pct(){
+local v="${1:-N/A}"
+[[ $v != "N/A" ]]&&v="$v%"
+echo "$v"
+}
+echo -ne "\r$Font_Cyan${smark[pct]}$RST"
+echo -ne "$Font_Green$Font_B$(_center9 "$(_fmt_pct "${markinfo[total_pct]}")")"
+echo -ne "     "
+echo -ne "$(_center9 "$(_fmt_pct "${markinfo[cpu_pct]}")")"
+echo -ne "     "
+echo -ne "$(_center9 "$(_fmt_pct "${markinfo[gpu_pct]}")")"
+echo -ne "     "
+echo -ne "$(_center9 "$(_fmt_pct "${markinfo[mem_pct]}")")"
+echo -ne "     "
+echo -ne "$(_center9 "$(_fmt_pct "${markinfo[disk_pct]}")")$RST\n"
+}
 show_tail(){
 echo -ne "\r$(printf '%80s'|tr ' ' '=')\n"
 echo -ne "\r$Font_I${stail[stoday]}${stail[today]}${stail[stotal]}${stail[total]}${stail[thanks]} $Font_Suffix\n"
@@ -4624,6 +5037,37 @@ hwjson="$(jq \
       }
     }
     ' <<<"$_hwjson")"
+_hwjson="$hwjson"
+hwjson="$(jq \
+--arg total "${markinfo[total]:-}" \
+--arg cpu "${markinfo[cpu]:-}" \
+--arg gpu "${markinfo[gpu]:-}" \
+--arg mem "${markinfo[mem]:-}" \
+--arg disk "${markinfo[disk]:-}" \
+--arg total_pct "${markinfo[total_pct]:-}" \
+--arg cpu_pct "${markinfo[cpu_pct]:-}" \
+--arg gpu_pct "${markinfo[gpu_pct]:-}" \
+--arg mem_pct "${markinfo[mem_pct]:-}" \
+--arg disk_pct "${markinfo[disk_pct]:-}" \
+'
+    def num($v):
+      if ($v // "" | tostring | test("^[0-9]+(\\.[0-9]+)?$"))
+      then ($v | tonumber)
+      else null
+      end;
+    .Benchmark = {
+      total:        num($total),
+      cpu:          num($cpu),
+      gpu:          num($gpu),
+      memory:       num($mem),
+      disk:         num($disk),
+      total_pct:    num($total_pct),
+      cpu_pct:      num($cpu_pct),
+      gpu_pct:      num($gpu_pct),
+      memory_pct:   num($mem_pct),
+      disk_pct:     num($disk_pct)
+    }
+    ' <<<"$_hwjson")"
 }
 check_Hardware(){
 IP=$1
@@ -4635,7 +5079,8 @@ hwjson='{
         "CPU": {},
         "GPU": {},
         "Memory": {},
-        "Disk": {}
+        "Disk": {},
+        "Benchmark": {}
     }'
 [[ $2 -eq 4 ]]&&hide_ipv4 $IP
 [[ $2 -eq 6 ]]&&hide_ipv6 $IP
@@ -4652,6 +5097,7 @@ get_virt
 [[ $mode_skip != *"5"* && $mode_fast -eq 0 ]]&&test_mem
 [[ $mode_skip != *"6"* ]]&&get_disk
 [[ $mode_skip != *"6"* && $mode_fast -eq 0 ]]&&test_disk
+[[ $mode_skip != *"7"* && $mode_fast != 1 && ($mode_skip != *3* || $mode_skip != *4* || $mode_skip != *5* || $mode_skip != *6*) ]]&&get_mark
 echo -ne "$Font_LineClear" 1>&2
 for ((i=0; i<ADLines; i++));do
 echo -ne "$Font_LineUp" 1>&2
@@ -4664,6 +5110,7 @@ local hw_report=$(show_head
 [[ $mode_skip != *"4"* ]]&&show_gpu
 [[ $mode_skip != *"5"* ]]&&show_mem
 [[ $mode_skip != *"6"* ]]&&show_disk
+[[ $mode_skip != *"7"* && $mode_fast != 1 && ($mode_skip != *3* || $mode_skip != *4* || $mode_skip != *5* || $mode_skip != *6*) ]]&&show_mark
 show_tail)
 local report_link=""
 [[ mode_json -eq 1 || mode_output -eq 1 || mode_privacy -eq 0 ]]&&save_json
