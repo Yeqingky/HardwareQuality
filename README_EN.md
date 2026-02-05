@@ -139,6 +139,8 @@ docker run --rm -it --privileged xykt/hardwarequality & docker rmi xykt/hardware
 
 ## Script Updates
 
+2026/02/05 16:50 Add HQ Weighted Hardware Benchmark
+
 2026/01/28 20:00 Add verbose mode to show benchmark score details
 
 2026/01/16 00:00 Script Released
