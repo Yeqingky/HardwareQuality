@@ -1,5 +1,5 @@
 #!/bin/bash
-script_version="v2026-02-05"
+script_version="v2026-02-07"
 check_bash(){
 current_bash_version=$(bash --version|head -n 1|awk -F ' ' '{for (i=1; i<=NF; i++) if ($i ~ /^[0-9]+\.[0-9]+\.[0-9]+/) {print $i; exit}}'|cut -d . -f 1)
 if [ "$current_bash_version" = "0" ]||[ "$current_bash_version" = "1" ]||[ "$current_bash_version" = "2" ]||[ "$current_bash_version" = "3" ];then
@@ -3777,23 +3777,23 @@ local -A diskline
 local -A smartlen
 local -A smartline
 disklen[f]=0
-[[ ${diskinfo[count]:-0} -eq 0 ]]&&return
+diskline[f]=""
 if [[ -n ${diskinfo[count]} && ${diskinfo[count]} -gt 0 ]];then
 diskline[f]="${sdisk[count]}${diskinfo[count]}"
 disklen[f]=$((disklen[f]-sdisk[lcount]))
 fi
 if [[ -n ${diskinfo[total]} && ${diskinfo[total]} -gt 0 ]];then
-[[ -n "$diskline[f]" ]]&&diskline[f]+=",  "
+[[ -n ${diskline[f]} ]]&&diskline[f]+=",  "
 diskline[f]+="${sdisk[total]}$(fmt_bytes "${diskinfo[total]}")"
 disklen[f]=$((disklen[f]-sdisk[ltotal]))
 fi
 if [[ -n ${diskinfo[used]} && ${diskinfo[used]} -gt 0 && -n ${diskinfo[p_used]} ]];then
-[[ -n "$diskline[f]" ]]&&diskline[f]+=",  "
+[[ -n ${diskline[f]} ]]&&diskline[f]+=",  "
 diskline[f]+="${sdisk[used]}$(fmt_bytes "${diskinfo[used]}")(${diskinfo[p_used]}%)"
 disklen[f]=$((disklen[f]-sdisk[lused]))
 fi
 if [[ -n ${diskinfo[avail]} && ${diskinfo[avail]} -gt 0 && -n ${diskinfo[p_avail]} ]];then
-[[ -n "$diskline[f]" ]]&&diskline[f]+=",  "
+[[ -n "${diskline[f]}" ]]&&diskline[f]+=",  "
 diskline[f]+="${sdisk[avail]}$(fmt_bytes "${diskinfo[avail]}")(${diskinfo[p_avail]}%)"
 disklen[f]=$((disklen[f]-sdisk[lavail]))
 fi
