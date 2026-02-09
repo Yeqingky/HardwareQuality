@@ -1,5 +1,5 @@
 #!/bin/bash
-script_version="v2026-02-07"
+script_version="v2026-02-10"
 check_bash(){
 current_bash_version=$(bash --version|head -n 1|awk -F ' ' '{for (i=1; i<=NF; i++) if ($i ~ /^[0-9]+\.[0-9]+\.[0-9]+/) {print $i; exit}}'|cut -d . -f 1)
 if [ "$current_bash_version" = "0" ]||[ "$current_bash_version" = "1" ]||[ "$current_bash_version" = "2" ]||[ "$current_bash_version" = "3" ];then
@@ -951,7 +951,7 @@ local cpu_cores="$(getconf _NPROCESSORS_ONLN 2>/dev/null)"
 sos[load1]="$(colorize_load "${osinfo[load1]}" "$cpu_cores")"
 sos[load5]="$(colorize_load "${osinfo[load5]}" "$cpu_cores")"
 sos[load15]="$(colorize_load "${osinfo[load15]}" "$cpu_cores")"
-osinfo[user]=""
+if [[ -z ${osinfo[user]} ]];then
 local tmpuc=""
 if command -v loginctl >/dev/null 2>&1;then
 tmpuc="$(loginctl list-users 2>/dev/null|tail -n +2|wc -l|tr -d ' ')"
@@ -963,8 +963,10 @@ else
 tmpuc="$(who 2>/dev/null|wc -l|tr -d ' ')"
 [[ $tmpuc -gt 0 ]]&&osinfo[user]="$tmpuc"
 fi
-osinfo[proc]=$(ps -e 2>/dev/null|wc -l|tr -d ' ')
+fi
+[[ -z ${osinfo[proc]} ]]&&osinfo[proc]=$(ps -e 2>/dev/null|wc -l|tr -d ' ')
 [[ ${osinfo[proc]} -gt 0 ]]&&osinfo[proc]=$((osinfo[proc]-1))
+if [[ -z ${osinfo[svcr]} && -z ${osinfo[svct]} ]];then
 if [[ ${osinfo[virt]} == "docker" || ${osinfo[virt]} == "podman" ]]&&[[ "$(ps -p 1 -o comm= 2>/dev/null)" != "systemd" ]];then
 osinfo[svcr]=""
 osinfo[svct]=""
@@ -980,6 +982,7 @@ osinfo[svct]="${osinfo[svcr]}"
 else
 osinfo[svcr]=""
 osinfo[svct]=""
+fi
 fi
 local osloc=""
 if command -v localectl >/dev/null 2>&1;then
@@ -1944,6 +1947,7 @@ if ((meminfo[swap_total_kb]>0));then
 meminfo[swap_used_pct]=$(awk -v u="${meminfo[swap_used_kb]}" -v t="${meminfo[swap_total_kb]}" 'BEGIN{printf "%.0f", u*100/t}')
 meminfo[swap_avail_pct]=$((100-meminfo[swap_used_pct]))
 fi
+if [[ -z ${meminfo[balloon]} && -z ${meminfo[neighbor]} ]];then
 case "${osinfo[virt]}" in
 kvm)if
 lsmod 2>/dev/null|grep -q '^virtio_balloon'
@@ -1960,6 +1964,7 @@ fi
 ;;
 lxc)meminfo[neighbor]=$(ls /sys/devices/virtual/block 2>/dev/null|grep -c '^dm')
 esac
+fi
 }
 test_mem(){
 local temp_info="$Font_Cyan$Font_B${sinfo[membench]}$Font_Suffix"
@@ -2286,6 +2291,7 @@ diskinfo["disk$idx.spare"]=$(sed -n 's/.*Available Spare:[[:space:]]*\([0-9]\+\)
 fi
 done < <(lsblk -dn -o NAME,ROTA,SIZE,TYPE -b|awk '$4=="disk" && $3>0 {print $1,$2,$3}')
 diskinfo[count]=$idx
+if [[ -z ${diskinfo[raid_count]} ]];then
 local ridx=0
 if [[ -r /proc/mdstat ]];then
 while read -r line;do
@@ -2305,6 +2311,7 @@ fi
 done </proc/mdstat
 fi
 diskinfo[raid_count]="$ridx"
+fi
 }
 detect_testdev_type(){
 local dev="$1"
@@ -2434,6 +2441,7 @@ fd4_open=1
 command -v fio >/dev/null 2>&1||return
 local workdir="$PWD"
 [[ -n $TestDir ]]&&workdir="$TestDir"
+if [[ -z ${diskinfo[testdir]} ]];then
 diskinfo[testdir]="$workdir"
 diskinfo[testdev]=$(df --output=source "$workdir"|awk 'NR==2')
 diskinfo[testdev_type]=$(detect_testdev_type "${diskinfo[testdev]}")
@@ -2441,6 +2449,7 @@ diskinfo[testdev]="${diskinfo[testdev]#/dev/}"
 if [[ ${diskinfo[testdev_type]} == RAID* ]];then
 diskinfo[testdev_members]=$(get_testdev_members_from_diskinfo "${diskinfo[testdev]}")
 diskinfo[testdev_mount]=$(get_testdev_mount_from_diskinfo "${diskinfo[testdev]}")
+fi
 fi
 [[ $fullinfo -eq 0 ]]&&diskinfo[testdir]="$(mask_path "${diskinfo[testdir]}")"
 local min_b=$((256*1024*1024))
@@ -3793,7 +3802,7 @@ diskline[f]+="${sdisk[used]}$(fmt_bytes "${diskinfo[used]}")(${diskinfo[p_used]}
 disklen[f]=$((disklen[f]-sdisk[lused]))
 fi
 if [[ -n ${diskinfo[avail]} && ${diskinfo[avail]} -gt 0 && -n ${diskinfo[p_avail]} ]];then
-[[ -n "${diskline[f]}" ]]&&diskline[f]+=",  "
+[[ -n ${diskline[f]} ]]&&diskline[f]+=",  "
 diskline[f]+="${sdisk[avail]}$(fmt_bytes "${diskinfo[avail]}")(${diskinfo[p_avail]}%)"
 disklen[f]=$((disklen[f]-sdisk[lavail]))
 fi
@@ -5133,6 +5142,7 @@ adaptoslocale
 check_connectivity
 get_ipv4
 get_ipv6
+[[ -n $NQENV ]]&&eval "$NQENV"
 get_opts "$@"
 [[ mode_no -eq 0 ]]&&install_dependencies 1>&2
 set_language
