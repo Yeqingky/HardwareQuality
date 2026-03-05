@@ -1,5 +1,5 @@
 #!/bin/bash
-script_version="v2026-02-17"
+script_version="v2026-03-05"
 check_bash(){
 current_bash_version=$(bash --version|head -n 1|awk -F ' ' '{for (i=1; i<=NF; i++) if ($i ~ /^[0-9]+\.[0-9]+\.[0-9]+/) {print $i; exit}}'|cut -d . -f 1)
 if [ "$current_bash_version" = "0" ]||[ "$current_bash_version" = "1" ]||[ "$current_bash_version" = "2" ]||[ "$current_bash_version" = "3" ];then
@@ -2690,7 +2690,7 @@ local i=0
 while :;do
 local vram_key="item$i.vram_gb"
 [[ -z ${gpuinfo[$vram_key]+x} ]]&&break
-VRAM_sum=$(bc -l <<<"$VRAM_sum + ${gpuinfo[$vram_key]}")
+[[ -n ${gpuinfo[$vram_key]} ]]&&VRAM_sum=$(bc -l <<<"$VRAM_sum + ${gpuinfo[$vram_key]}")
 ((GPU_count++))
 ((i++))
 done
@@ -3073,7 +3073,6 @@ local mid_low="$3"
 local mid_high="$4"
 local high_max="$5"
 local seg_width=20
-local total_width=60
 local pos=1
 if ((score<=low_min));then
 pos=1
@@ -3089,32 +3088,34 @@ fi
 ((pos<1))&&pos=1
 ((pos>60))&&pos=60
 local bar=""
-local i bg color
-for ((i=1; i<=pos; i++));do
-if ((i<=seg_width));then
+local n
+if ((pos>=1));then
+n=$((pos<20?pos:20))
+if ((n>0));then
+bar+="$Back_Red$(printf "%${n}s")$Font_Suffix"
+fi
+fi
+if ((pos>20));then
+n=$((pos-20<20?pos-20:20))
+bar+="$Back_Yellow$(printf "%${n}s")$Font_Suffix"
+fi
+if ((pos>40));then
+n=$((pos-40<20?pos-40:20))
+bar+="$Back_Green$(printf "%${n}s")$Font_Suffix"
+fi
+local color bg
+if ((pos<=20));then
+color="$Font_Red"
 bg="$Back_Red"
-color="$Font_Red"
-elif ((i<=seg_width*2));then
+elif ((pos<=40));then
+color="$Font_Yellow"
 bg="$Back_Yellow"
-color="$Font_Yellow"
 else
+color="$Font_Green"
 bg="$Back_Green"
-color="$Font_Green"
 fi
-if ((i==pos));then
-bar+="$bg$Font_B|$Font_Suffix"
-else
-bar+="$bg $Font_Suffix"
-fi
-done
-if ((pos<=seg_width));then
-color="$Font_Red"
-elif ((pos<=seg_width*2));then
-color="$Font_Yellow"
-else
-color="$Font_Green"
-fi
-echo "$bar$Font_B$color$score$Font_Suffix"
+bar+="\b$bg$Font_White$Font_B|$Font_Suffix"
+echo -ne "$bar$Font_B$color$score$Font_Suffix"
 }
 cpu_gb_bar(){
 local text="$1"
@@ -3123,16 +3124,15 @@ local width=$((pct*20/100))
 ((width<1))&&width=1
 ((width>20))&&width=20
 text=$(printf "%20s" "$text")
+local left="${text:0:width}"
+local right="${text:width}"
 local out=""
-local ch
-for ((i=0; i<20; i++));do
-ch="${text:i:1}"
-if ((i<width));then
-out+="$Back_Cyan$Font_White$ch$Font_Suffix"
-else
-out+="$Font_Cyan$ch$Font_Suffix"
+if ((width>0));then
+out+="$Back_Cyan$Font_White$left$Font_Suffix"
 fi
-done
+if ((width<20));then
+out+="$Font_Cyan$right$Font_Suffix"
+fi
 printf '%s' "$out"
 }
 show_geekbench_cpu_table(){
@@ -3313,16 +3313,15 @@ local width=$((pct*50/100))
 ((width<1))&&width=1
 ((width>50))&&width=50
 text=$(printf "%50s" "$text")
+local left="${text:0:width}"
+local right="${text:width}"
 local out=""
-local ch
-for ((i=0; i<50; i++));do
-ch="${text:i:1}"
-if ((i<width));then
-out+="$Back_Cyan$Font_White$ch$Font_Suffix"
-else
-out+="$Font_Cyan$ch$Font_Suffix"
+if ((width>0));then
+out+="$Back_Cyan$Font_White$left$Font_Suffix"
 fi
-done
+if ((width<50));then
+out+="$Font_Cyan$right$Font_Suffix"
+fi
 printf '%s' "$out"
 }
 show_geekbench_gpu_table(){
