@@ -38,7 +38,7 @@
 
 ##### Bash：
 ````bash
-bash <(curl -Ls https://Check.Place) -H
+bash <(curl -Ls https://raw.githubusercontent.com/Yeqingky/HardwareQuality/refs/heads/main/hardware.sh) -H
 ````
 
 ##### Docker：
