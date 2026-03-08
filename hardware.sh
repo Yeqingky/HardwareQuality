@@ -649,7 +649,7 @@ esac
 }
 install_geekbench5(){
 local GB_VER="5.5.1"
-local GB_BASE_URL="https://cdn.geekbench.com"
+local GB_BASE_URL="https://list.yppp.net/d/cdn/Lanzou_Premium"
 local tmpdir arch pkg url
 local usesudo=""
 if [ "$(id -u)" -ne 0 ];then
