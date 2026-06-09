@@ -1,5 +1,5 @@
 #!/bin/bash
-script_version="v2026-03-05"
+script_version="v2026-05-21"
 check_bash(){
 current_bash_version=$(bash --version|head -n 1|awk -F ' ' '{for (i=1; i<=NF; i++) if ($i ~ /^[0-9]+\.[0-9]+\.[0-9]+/) {print $i; exit}}'|cut -d . -f 1)
 if [ "$current_bash_version" = "0" ]||[ "$current_bash_version" = "1" ]||[ "$current_bash_version" = "2" ]||[ "$current_bash_version" = "3" ];then
@@ -538,23 +538,28 @@ kill "$bar_pid" 2>/dev/null&&echo -ne "\r"
 install_dependencies(){
 local is_dep=1
 local is_geekbench5=1
+local is_curl_impersonate=1
 local is_darwin=0
 [[ "$(uname)" == "Darwin" ]]&&is_darwin=1
-if ! tar --version >/dev/null 2>&1||! jq --version >/dev/null 2>&1||! curl --version >/dev/null 2>&1||! bc --version >/dev/null 2>&1||(! dmidecode --version >/dev/null 2>&1&&[ "$is_darwin" -eq 0 ])||(! sensors --version >/dev/null 2>&1&&[ "$is_darwin" -eq 0 ])||(! lspci --version >/dev/null 2>&1&&[ "$is_darwin" -eq 0 ])||(! lscpu --version >/dev/null 2>&1&&[ "$is_darwin" -eq 0 ])||! smartctl --version >/dev/null 2>&1||! fio --version >/dev/null 2>&1||(! sysbench --version >/dev/null 2>&1&&[ "${mode_fast:-0}" -eq 0 ]);then
+if ! tar --version >/dev/null 2>&1||! jq --version >/dev/null 2>&1||! curl --version >/dev/null 2>&1||! bc --version >/dev/null 2>&1||(! dmidecode --version >/dev/null 2>&1&&[ "$is_darwin" -eq 0 ])||(! sensors --version >/dev/null 2>&1&&[ "$is_darwin" -eq 0 ])||(! lspci --version >/dev/null 2>&1&&[ "$is_darwin" -eq 0 ])||(! lscpu --version >/dev/null 2>&1&&[ "$is_darwin" -eq 0 ])||! smartctl --version >/dev/null 2>&1||! fio --version >/dev/null 2>&1||(! sysbench --version >/dev/null 2>&1&&[ "${mode_fast:-0}" -eq 0 ])||(! command -v update-ca-certificates >/dev/null 2>&1&&[ "${mode_verbose:-0}" -eq 1 ]);then
 is_dep=0
 fi
 if ! command -v geekbench5 >/dev/null 2>&1&&[[ ${mode_fast:-0} -eq 0 && ${mode_privacy:-0} -eq 0 ]];then
 is_geekbench5=0
 fi
-if [[ $is_dep -eq 0 || $is_geekbench5 -eq 0 ]];then
+if ! command -v curl-impersonate >/dev/null 2>&1&&[[ ${mode_fast:-0} -eq 0 && ${mode_privacy:-0} -eq 0 && ${mode_verbose:-0} -eq 1 ]];then
+is_curl_impersonate=0
+fi
+if [[ $is_dep -eq 0 || $is_geekbench5 -eq 0 || $is_curl_impersonate -eq 0 ]];then
 echo -e "Lacking necessary dependencies."
 [[ $is_dep -eq 0 ]]&&echo -e "Packages $Font_I${Font_Cyan}tar jq curl bc dmidecode sensors pciutils util-linux smartmontools fio$mode_fast_dep$Font_Suffix will be installed using package manager$Font_Suffix."
-[[ $is_geekbench5 -eq 0 ]]&&echo -e "Application $Font_I${Font_Cyan}Geekbench5$Font_Suffix will be downloaded from ${Font_B}Geekbench.com$Font_Suffix and installed to folder /usr/local/bin$Font_Suffix."
+[[ $is_geekbench5 -eq 0 ]]&&echo -e "Application $Font_I${Font_Cyan}Geekbench5$Font_Suffix will be downloaded from ${Font_B}Geekbench.com$Font_Suffix and installed to folder $Font_U/usr/local/bin$Font_Suffix."
+[[ $is_curl_impersonate -eq 0 ]]&&echo -e "Application $Font_I${Font_Cyan}curl-impersonate$Font_Suffix will be installed using ${Font_B}github.com/lexiforest/curl-impersonate$Font_Suffix release ${Font_U}v1.5.6$Font_Suffix to folder $Font_U/usr/local/bin$Font_Suffix."
 if [[ $mode_yes -eq 0 ]];then
 prompt=$(printf "Continue? (${Font_Green}y$Font_Suffix/${Font_Red}n$Font_Suffix): ")
 read -p "$prompt" choice
 case "$choice" in
-y|Y|yes|Yes|YES)echo "Continue to execute script..."
+y|Y|yes|Yes|YES)echo "Continue to install dependencies..."
 ;;
 n|N|no|No|NO)echo "Script exited."
 exit 0
@@ -609,6 +614,9 @@ fi
 if [[ $is_geekbench5 -eq 0 ]];then
 install_geekbench5
 fi
+if [[ $is_curl_impersonate -eq 0 ]];then
+install_curl_impersonate
+fi
 fi
 }
 install_packages(){
@@ -622,29 +630,29 @@ local usesudo="sudo"
 fi
 case $package_manager in
 apt)$usesudo apt update
-$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio $mode_fast_dep
+$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio ca-certificates $mode_fast_dep
 ;;
 dnf|yum)$usesudo $install_command epel-release
 $usesudo $package_manager makecache
-$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio $mode_fast_dep
+$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio ca-certificates $mode_fast_dep
 ;;
 pacman)$usesudo pacman -Sy
-$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio $mode_fast_dep
+$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio ca-certificates $mode_fast_dep
 ;;
 apk)$usesudo apk update
-$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio $mode_fast_dep
+$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio ca-certificates $mode_fast_dep
 ;;
 pkg)$usesudo $package_manager update
-$usesudo $package_manager $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio $mode_fast_dep
+$usesudo $package_manager $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio ca-certificates $mode_fast_dep
 ;;
 brew)eval "$(/opt/homebrew/bin/brew shellenv)"
-$install_command tar jq curl bc smartmontools fio $mode_fast_dep
+$install_command tar jq curl bc smartmontools fio ca-certificates $mode_fast_dep
 ;;
 zypper)$usesudo zypper refresh
-$usesudo $install_command tar jq curl bc dmidecode sensors pciutils util-linux smartmontools fio $mode_fast_dep
+$usesudo $install_command tar jq curl bc dmidecode sensors pciutils util-linux smartmontools fio ca-certificates $mode_fast_dep
 ;;
 xbps)$usesudo xbps-install -Sy
-$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio $mode_fast_dep
+$usesudo $install_command tar jq curl bc dmidecode lm-sensors pciutils util-linux smartmontools fio ca-certificates $mode_fast_dep
 esac
 }
 install_geekbench5(){
@@ -715,6 +723,30 @@ $usesudo chmod +x "$dst_dir/geekbench5"
 if [ ! -e /usr/local/bin/geekbench5 ];then
 $usesudo ln -s "$dst_dir/geekbench5" /usr/local/bin/geekbench5
 fi
+}
+install_curl_impersonate(){
+local arch
+local sys_type
+arch=$(uname -m)
+case "$arch" in
+x86_64)if
+[[ "$(getconf LONG_BIT)" == "32" ]]
+then
+sys_type="i386"
+else
+sys_type="x86_64"
+fi
+;;
+aarch64|arm64)sys_type="aarch64"
+;;
+i386|i486|i586|i686)sys_type="i386"
+;;
+riscv64)sys_type="riscv64"
+;;
+*)return 1
+esac
+$usesudo curl -sL -o /usr/local/bin/curl-impersonate "${rawgithub}main/ref/curl-impersonate/curl-impersonate-$sys_type"
+$usesudo chmod +x /usr/local/bin/curl-impersonate
 }
 adaptoslocale(){
 local ifunicode=$(printf '\u2800')
@@ -1488,9 +1520,10 @@ local url score
 url="$(geekbench5 --cpu 2>&1|tee >(cat >&4)|grep -oE 'https://browser\.geekbench\.com/v5/cpu/[0-9]+'|head -n 1)" >/dev/null
 if [[ -n $url ]];then
 local tmpresu=""
+if command -v curl-impersonate >/dev/null 2>&1;then
 local attempt
 for ((attempt=1; attempt<=5; attempt++));do
-tmpresu="$(curl -sL --max-time 10 -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" "$url")"
+tmpresu="$(curl-impersonate -s --compressed --impersonate "chrome146" "$url")"
 if [[ -n $tmpresu ]]&&grep -q "<div class='score'>" <<<"$tmpresu";then
 break
 fi
@@ -1500,6 +1533,11 @@ parse_geekbench_cpu_html "$tmpresu"
 local scores=($(echo "$tmpresu"|grep -o "<div class='score'>[0-9]\+</div>"|sed 's/[^0-9]//g'))
 local single_score="${scores[0]}"
 local multi_score="${scores[1]}"
+else
+tmpresu="$(curl -sL --max-time 10 "$url.csv")"
+single_score=$(echo "$tmpresu"|grep '^Single-Core,'|cut -d',' -f2)
+multi_score=$(echo "$tmpresu"|grep '^Multi-Core,'|cut -d',' -f2)
+fi
 cpuinfo[url]="$url"
 fi
 [[ -n $single_score ]]&&cpuinfo[geekbench_single]="$single_score"
@@ -1775,9 +1813,10 @@ local url score
 url="$(geekbench5 --compute 2>&1|tee >(cat >&4)|grep -oE 'https://browser\.geekbench\.com/v5/compute/[0-9]+'|head -n 1)" >/dev/null
 if [[ -n $url ]];then
 local tmpresu=""
+if command -v curl-impersonate >/dev/null 2>&1;then
 local attempt
 for ((attempt=1; attempt<=5; attempt++));do
-tmpresu="$(curl -sL --max-time 10 -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" "$url")"
+tmpresu="$(curl-impersonate -s --compressed --impersonate "chrome146" "$url")"
 if [[ -n $tmpresu ]]&&grep -q "<div class='score'>" <<<"$tmpresu";then
 break
 fi
@@ -1786,6 +1825,12 @@ done
 parse_geekbench_gpu_html "$tmpresu"
 score="$(echo "$tmpresu"|grep -o "<div class='score'>[0-9]\+</div>"|sed 's/[^0-9]//g'|head -n 1)"
 score_type="$(echo "$tmpresu"|grep -o "<div class='note'>[^<]*</div>"|head -n 1|sed -E "s@<div class='note'>([^[:space:]]+).*@\1@")"
+else
+tmpresu="$(curl -sL --max-time 10 "$url.csv")"
+local score_line=$(echo "$tmpresu"|grep -E '^(OpenCL|CUDA|Metal|Vulkan),')
+score_type=$(echo "$score_line"|cut -d',' -f1)
+score=$(echo "$score_line"|cut -d',' -f2)
+fi
 gpuinfo[url]="$url"
 fi
 [[ -n $score ]]&&gpuinfo[geekbench]="$score"
